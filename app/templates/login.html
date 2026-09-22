@@ -1,0 +1,24 @@
+{# login.html — Form đăng nhập. Lỗi đăng nhập hiển thị qua flash message trong base.html. #}
+{% extends "base.html" %}
+{% block title %}Login - ET E4 Hotel{% endblock %}
+
+{% block content %}
+<section class="page page-narrow">
+  <h1>Login</h1>
+
+  <form method="post" class="login-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn btn-primary" type="submit">Login</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{# base.html — Khung chung: header (tên khách sạn bên trái, menu bên phải) + vùng nội dung. #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# Token CSRF để JS gửi kèm header X-CSRFToken khi gọi API ghi #}
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}ET E4 Hotel{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="{{ url_for('main.home') }}">ET E4 Hotel</a>
+
+    <nav class="site-nav" aria-label="Main">
+      <a href="{{ url_for('main.home') }}"
+         {% if request.endpoint == 'main.home' %}aria-current="page"{% endif %}>Home</a>
+      <a href="{{ url_for('admin_rooms.index') }}"
+         {% if request.endpoint == 'admin_rooms.index' %}aria-current="page"{% endif %}>Edit room</a>
+
+      {# Login là nút bấm; khi đã đăng nhập thì đổi thành nút Logout (POST + CSRF) #}
+      {% if current_user %}
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary" type="submit">Logout</button>
+        </form>
+      {% else %}
+        <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Login</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="banner banner-{{ category }}" role="alert">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

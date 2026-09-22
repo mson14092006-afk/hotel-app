@@ -1,0 +1,11 @@
+{# error.html — Trang lỗi chung (403, 404, 400, ...) cho các đường dẫn không phải /api/*. #}
+{% extends "base.html" %}
+{% block title %}{{ error.code }} - ET E4 Hotel{% endblock %}
+
+{% block content %}
+<section class="page page-narrow">
+  <h1>{{ error.code }}</h1>
+  <p>{{ error.description }}</p>
+  <p><a href="{{ url_for('main.home') }}">Back to Home</a></p>
+</section>
+{% endblock %}

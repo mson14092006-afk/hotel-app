@@ -1,0 +1,159 @@
+:root {
+  --ink: #1b2430;
+  --muted: #4a5565;
+  --line: #d5dbe3;
+  --surface: #ffffff;
+  --page: #f2f4f7;
+  --accent: #9c1c2e;
+  --accent-dark: #7e1524;
+  --danger: #b42318;
+  --focus: #2457c5;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 18px; }
+
+body {
+  margin: 0;
+  font-family: "Lato", "Helvetica Neue", Arial, sans-serif;
+  font-size: 18px; /* cỡ chữ nhỏ nhất của toàn site */
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--page);
+}
+
+/* Ô nhập/nút mặc định của trình duyệt dùng cỡ chữ ~13px -> ép kế thừa 18px + Lato */
+button, input, select, textarea { font: inherit; color: inherit; }
+
+h1, h2 { margin: 0; font-weight: 700; line-height: 1.15; }
+h1 { font-size: 48px; }
+h2 { font-size: 32px; } /* tiêu đề phụ (hộp thoại) */
+
+a { color: var(--accent); }
+[hidden] { display: none !important; }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Header ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  padding: 0.75rem 2rem;
+  background: var(--surface);
+  border-bottom: 4px solid var(--accent);
+}
+.brand {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+}
+.site-nav { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.site-nav form { margin: 0; }
+.site-nav a:not(.btn) { color: var(--ink); text-decoration: none; padding: 0.25rem 0; }
+.site-nav a:not(.btn):hover { text-decoration: underline; }
+.site-nav a[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+}
+
+/* ---------- Nút ---------- */
+.btn {
+  display: inline-block;
+  padding: 0.45rem 1.1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn-primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.btn-danger { color: var(--danger); border-color: var(--danger); }
+.btn-danger:hover { color: #fff; background: var(--danger); border-color: var(--danger); }
+
+/* ---------- Bố cục trang ---------- */
+.page { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+.page-narrow { max-width: 460px; }
+.page-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+
+/* Trang chủ */
+.hero { text-align: center; padding: 5rem 1.5rem 1.5rem; }
+.hotel-description { max-width: 40rem; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+/* ---------- Thông báo ---------- */
+.banner { margin: 1rem 0; padding: 0.6rem 1rem; font-weight: 700; border-radius: 6px; }
+.banner-success { color: #14573a; background: #ddf3e7; }
+.banner-error { color: #8e1b12; background: #fbe3e0; }
+main > .banner { max-width: 1100px; margin: 1rem auto 0; }
+
+/* ---------- Form ---------- */
+.field label { display: block; margin-bottom: 0.25rem; font-weight: 700; }
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+}
+.field textarea { resize: vertical; }
+.field-error { min-height: 0; margin: 0.25rem 0 0; color: var(--danger); font-weight: 700; }
+.field-error:empty { display: none; }
+
+.login-form { display: grid; gap: 1.25rem; margin-top: 2rem; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin: 2rem 0 1rem; }
+.filters .field { min-width: 13rem; }
+
+/* ---------- Bảng ---------- */
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 0.7rem 1rem; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); }
+th { font-weight: 700; white-space: nowrap; background: #f8f9fb; }
+tbody tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.actions { white-space: nowrap; }
+td.actions .btn { padding: 0.15rem 0.7rem; margin-right: 0.4rem; }
+
+.badge { display: inline-block; padding: 0 0.7rem; font-weight: 700; border-radius: 999px; }
+.badge-active { color: #14573a; background: #ddf3e7; }
+.badge-maintenance { color: #6b4700; background: #fbebc8; }
+.badge-inactive { color: #3b4553; background: #e6e9ee; }
+
+/* ---------- Hộp thoại thêm/sửa ---------- */
+dialog {
+  width: min(680px, calc(100vw - 2rem));
+  padding: 1.75rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 0;
+  border-radius: 10px;
+}
+dialog::backdrop { background: rgba(27, 36, 48, 0.55); }
+.form-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-top: 1.25rem; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-6 { grid-column: span 6; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+
+@media (max-width: 640px) {
+  h1 { overflow-wrap: anywhere; }
+  .site-header { padding: 0.75rem 1rem; }
+  .span-2, .span-3 { grid-column: span 6; }
+}
