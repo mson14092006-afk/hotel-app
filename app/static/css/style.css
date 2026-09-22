@@ -1,3 +1,6 @@
+/* style.css — Giao diện ET E4 Hotel.
+   Quy tắc: font Lato; tiêu đề (h1) in đậm 48px; KHÔNG có chữ nào nhỏ hơn 18px. */
+
 :root {
   --ink: #1b2430;
   --muted: #4a5565;
@@ -112,6 +115,8 @@ main > .banner { max-width: 1100px; margin: 1rem auto 0; }
 .field-error:empty { display: none; }
 
 .login-form { display: grid; gap: 1.25rem; margin-top: 2rem; }
+.resend-form { margin-top: 1.25rem; }
+.helper-text { margin-top: 1.5rem; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin: 2rem 0 1rem; }
 .filters .field { min-width: 13rem; }
