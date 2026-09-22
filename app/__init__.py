@@ -28,9 +28,6 @@ def create_app(config_name: str | None = None) -> Flask:
     _register_blueprints(app)
     _register_error_handlers(app)
 
-    # from app.cli import register_cli
-
-    # register_cli(app)
     return app
 
 

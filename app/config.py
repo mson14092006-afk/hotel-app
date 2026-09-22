@@ -1,9 +1,9 @@
 """config.py — Toàn bộ cấu hình ứng dụng, đọc từ biến môi trường."""
 import os
 
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()  # đọc file .env (nếu có) vào os.environ
+# load_dotenv()  # đọc file .env (nếu có) vào os.environ
 
 
 class BaseConfig:
@@ -20,6 +20,18 @@ class BaseConfig:
 
     # Token CSRF gắn với session, không tự hết hạn sau 1 giờ (trang admin có thể mở lâu).
     WTF_CSRF_TIME_LIMIT = None
+
+     # --- Email xác thực đăng ký ---
+    # "console": chưa cấu hình SMTP thật -> ghi link xác thực ra log + file MAIL_OUTBOX_FILE.
+    # "smtp": gửi email thật bằng MAIL_SERVER/MAIL_USERNAME/MAIL_PASSWORD ở dưới.
+    MAIL_BACKEND = os.getenv("MAIL_BACKEND", "console")
+    MAIL_OUTBOX_FILE = os.getenv("MAIL_OUTBOX_FILE", ".dev_mail_outbox.log")
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "localhost")
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "no-reply@ete4hotel.example")
 
     @classmethod
     def validate(cls) -> None:

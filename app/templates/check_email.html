@@ -1,0 +1,23 @@
+{# check_email.html — Hiện sau khi đăng ký hoặc bấm "Resend": nhắc kiểm tra email. #}
+{% extends "base.html" %}
+{% block title %}Check your email - ET E4 Hotel{% endblock %}
+
+{% block content %}
+<section class="page page-narrow">
+  <h1>Check your email</h1>
+
+  {% if resent %}
+    <p class="banner banner-success">Verification email resent to {{ email }}.</p>
+  {% else %}
+    <p>We sent a verification link to <strong>{{ email }}</strong>. Open it to activate your account.</p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('auth.resend_verification') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="email" value="{{ email }}">
+    <button class="btn" type="submit">Resend email</button>
+  </form>
+
+  <p class="helper-text"><a href="{{ url_for('auth.login') }}">Back to Login</a></p>
+</section>
+{% endblock %}

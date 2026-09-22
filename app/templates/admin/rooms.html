@@ -1,0 +1,114 @@
+{# admin/rooms.html — Trang "Edit room": bảng phòng + hộp thoại thêm/sửa. Logic ở static/js/rooms.js. #}
+{% extends "base.html" %}
+{% block title %}Edit room - ET E4 Hotel{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="page-head">
+    <h1>Edit room</h1>
+    <button id="add-room" class="btn btn-primary" type="button">Add room</button>
+  </div>
+
+  <form id="filters" class="filters" role="search">
+    <div class="field">
+      <label for="filter-q">Search by name</label>
+      <input id="filter-q" name="q" type="search">
+    </div>
+    <div class="field">
+      <label for="filter-type">Type</label>
+      <select id="filter-type" name="type">
+        <option value="">All</option>
+        {% for t in room_types %}<option value="{{ t }}">{{ t|capitalize }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="filter-status">Status</label>
+      <select id="filter-status" name="status">
+        <option value="">All</option>
+        {% for s in room_statuses %}<option value="{{ s }}">{{ s|capitalize }}</option>{% endfor %}
+      </select>
+    </div>
+  </form>
+
+  {# Thông báo thành công / lỗi của thao tác #}
+  <p id="banner" class="banner" role="status" hidden></p>
+
+  <div id="table-wrap" class="table-wrap" hidden>
+    <table id="rooms-table">
+      <thead>
+        <tr>
+          <th class="num">ID</th>
+          <th>Name</th>
+          <th>Type</th>
+          <th class="num">Capacity</th>
+          <th class="num">Units</th>
+          <th class="num">Price / night (VND)</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p id="empty" hidden></p>
+</section>
+
+{# Hộp thoại dùng chung cho Thêm và Sửa (phần tử <dialog> có sẵn của trình duyệt) #}
+<dialog id="room-dialog" aria-labelledby="dialog-title">
+  <form id="room-form" novalidate>
+    <h2 id="dialog-title">Add room</h2>
+    <p id="form-banner" class="banner banner-error" role="alert" hidden></p>
+
+    <div class="form-grid">
+      <div class="field span-6">
+        <label for="f-name">Name</label>
+        <input id="f-name" name="name" maxlength="120" required>
+        <p class="field-error" data-error-for="name"></p>
+      </div>
+      <div class="field span-3">
+        <label for="f-type">Type</label>
+        <select id="f-type" name="type" required>
+          {% for t in room_types %}<option value="{{ t }}">{{ t|capitalize }}</option>{% endfor %}
+        </select>
+        <p class="field-error" data-error-for="type"></p>
+      </div>
+      <div class="field span-3">
+        <label for="f-status">Status</label>
+        <select id="f-status" name="status" required>
+          {% for s in room_statuses %}<option value="{{ s }}">{{ s|capitalize }}</option>{% endfor %}
+        </select>
+        <p class="field-error" data-error-for="status"></p>
+      </div>
+      <div class="field span-2">
+        <label for="f-capacity">Capacity</label>
+        <input id="f-capacity" name="capacity" type="number" min="1" step="1" required>
+        <p class="field-error" data-error-for="capacity"></p>
+      </div>
+      <div class="field span-2">
+        <label for="f-units">Total units</label>
+        <input id="f-units" name="total_units" type="number" min="1" step="1" required>
+        <p class="field-error" data-error-for="total_units"></p>
+      </div>
+      <div class="field span-2">
+        <label for="f-price">Price / night</label>
+        <input id="f-price" name="price_per_night" type="number" min="0" step="any" required>
+        <p class="field-error" data-error-for="price_per_night"></p>
+      </div>
+      <div class="field span-6">
+        <label for="f-description">Description</label>
+        <textarea id="f-description" name="description" rows="3" maxlength="2000"></textarea>
+        <p class="field-error" data-error-for="description"></p>
+      </div>
+    </div>
+
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="cancel-room">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save room</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/rooms.js') }}" defer></script>
+{% endblock %}
