@@ -1,0 +1,29 @@
+{# client/home.html - Trang chủ cho khách#}
+{% extends "base.html" %}
+{% block title %}Welcome - ET E4 Hotel{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Welcome</h1>
+</section>
+
+<section class="hotel-description">
+    <p>Giới thiệu ngắn về khách sạn (vị trí, phong cách, đối tượng khách).</p>
+</section>
+
+<section class="page">
+  {% if rooms %}
+    <div class="room-grid">
+      {% for room in rooms %}
+        <a class="room-card" href="{{ url_for('customer.room_detail', room_id=room.id) }}">
+          <h2 class="room-card-name">{{ room.name }}</h2>
+          <p>{{ room.type|capitalize }} · Up to {{ room.capacity }} guest(s)</p>
+          <p class="room-card-price">{{ "{:,.0f}".format(room.price_per_night) }} VND / night</p>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No rooms available right now.</p>
+  {% endif %}
+</section>
+{% endblock %}

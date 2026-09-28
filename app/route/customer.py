@@ -11,7 +11,7 @@ bp = Blueprint("customer", __name__)
 @bp.get("/rooms")
 def rooms():
     """Danh sách phòng đang mở bán — xem công khai, không cần đăng nhập."""
-    return render_template("rooms.html", rooms=booking_service.list_active_rooms())
+    return render_template("client/rooms.html", rooms=booking_service.list_active_rooms())
 
 
 @bp.get("/rooms/<int:room_id>")
@@ -22,7 +22,7 @@ def room_detail(room_id):
     except NotFoundError:
         flash("Room not found.", "error")
         return redirect(url_for("customer.rooms"))
-    return render_template("room_detail.html", room=room)
+    return render_template("client/room_detail.html", room=room)
 
 
 @bp.post("/rooms/<int:room_id>/book")
@@ -40,7 +40,7 @@ def book_room(room_id):
     except ValidationError as exc:
         for message in exc.errors.values():
             flash(message, "error")
-        return render_template("room_detail.html", room=room, form=request.form), 422
+        return render_template("client/room_detail.html", room=room, form=request.form), 422
 
     flash("Booking confirmed.", "success")
     return redirect(url_for("customer.my_bookings"))
@@ -50,7 +50,7 @@ def book_room(room_id):
 @login_required
 def my_bookings():
     """Danh sách booking của chính user đang đăng nhập."""
-    return render_template("my_bookings.html", bookings=booking_service.list_user_bookings(g.user))
+    return render_template("client/my_bookings.html", bookings=booking_service.list_user_bookings(g.user))
 
 
 @bp.post("/my-bookings/<int:booking_id>/cancel")

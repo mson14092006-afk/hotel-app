@@ -21,3 +21,17 @@ def admin_required(view):
         return view(*args, **kwargs)
 
     return wrapped
+
+
+def login_required(view):
+    """Chỉ cần đã đăng nhập (customer hoặc admin đều được), không yêu cầu admin."""
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if g.user is None:
+            if request.path.startswith("/api/"):
+                return jsonify(error="Authentication required."), 401
+            return redirect(url_for("auth.login", next=request.path))
+        return view(*args, **kwargs)
+
+    return wrapped

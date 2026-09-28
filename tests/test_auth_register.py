@@ -53,7 +53,7 @@ def test_first_verified_user_becomes_admin(app, client, tmp_path):
 
     login = client.post("/login", data={"username": "sonnguyen", "password": "password123"})
     assert login.status_code == 302
-    assert "/admin/rooms" in login.headers["Location"]
+    assert "/admin" in login.headers["Location"]  # /admin/rooms (bản cũ) hoặc /admin (sau khi bật Hello Admin)
 
 
 def test_second_verified_user_is_customer(app, client, tmp_path):
