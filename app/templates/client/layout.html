@@ -1,7 +1,4 @@
-{# base.html — Khung chung: header (tên khách sạn bên trái, menu bên phải) + vùng nội dung. #}
-{#
-{% extends "admin/layout.html" if current_user and current_user.is_admin else "client/layout.html" %}
-#}
+{# client/layout.html — Khung giao diện dành cho KHÁCH (customer hoặc chưa đăng nhập). #}
 <!doctype html>
 <html lang="en">
 <head>
@@ -20,27 +17,20 @@
     <a class="brand" href="{{ url_for('main.home') }}">ET E4 Hotel</a>
 
     <nav class="site-nav" aria-label="Main">
+      {# "Book room" dẫn về trang chủ khách (Welcome + danh sách phòng để đặt) #}
       <a href="{{ url_for('main.home') }}"
-         {% if request.endpoint == 'main.home' %}aria-current="page"{% endif %}>Home</a>
-      {#
-      <a href="{{ url_for('customer.rooms') }}"
-         {% if request.endpoint == 'customer.rooms' %}aria-current="page"{% endif %}>Rooms</a>
-      {% if current_user and not current_user.is_admin %}
+         {% if request.endpoint in ('main.home', 'customer.rooms', 'customer.room_detail') %}aria-current="page"{% endif %}>Book room</a>
+
+      {% if current_user %}
         <a href="{{ url_for('customer.my_bookings') }}"
            {% if request.endpoint == 'customer.my_bookings' %}aria-current="page"{% endif %}>My bookings</a>
-      {% endif %}
-      #}
-
-      <a href="{{ url_for('admin_rooms.index') }}"
-         {% if request.endpoint == 'admin_rooms.index' %}aria-current="page"{% endif %}>Edit room</a>
-
-      {# Login là nút bấm; khi đã đăng nhập thì đổi thành nút Logout (POST + CSRF) #}
-      {% if current_user %}
         <form method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-primary" type="submit">Logout</button>
         </form>
       {% else %}
+        <a href="{{ url_for('auth.register') }}"
+           {% if request.endpoint == 'auth.register' %}aria-current="page"{% endif %}>Register</a>
         <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Login</a>
       {% endif %}
     </nav>

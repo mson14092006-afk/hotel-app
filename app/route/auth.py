@@ -55,6 +55,10 @@ def login():
         session["user_id"] = user.id
         if next_url:
             return redirect(next_url)
+        
+        # admin vào thẳng "Hello Admin" (/admin)
+        if user.is_admin:
+            return redirect(url_for("admin_home.index"))
         return redirect(url_for("admin_rooms.index" if user.is_admin else "main.home"))
 
     return render_template("login.html", next_url=next_url)

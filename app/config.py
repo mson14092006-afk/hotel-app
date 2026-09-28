@@ -1,16 +1,19 @@
-"""config.py — Toàn bộ cấu hình ứng dụng, đọc từ biến môi trường."""
+"""config.py — Toàn bộ cấu hình ứng dụng, đọc từ biến môi trường.
+
+Tách config khỏi code để đổi môi trường (dev/test/prod) mà không sửa source
+
+"""
 import os
 
-# from dotenv import load_dotenv
-
-# load_dotenv()  # đọc file .env (nếu có) vào os.environ
-
+# DEVELOPMENT: chạy app local, dùng PostgreSQL local (Docker Compose).
+# TESTING: chạy pytest, dùng test database riêng và được reset sau mỗi test.
+# PRODUCTION: chạy app thật trên AWS, dùng PostgreSQL trên Amazon RDS.
 
 class BaseConfig:
     """Cấu hình dùng chung cho mọi môi trường."""
 
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "postgresql+psycopg2://hotel:hotel@localhost:5432/hotel_web"
+        "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@db:5432/hotel"
     )
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-change-me")
 
@@ -21,11 +24,8 @@ class BaseConfig:
     # Token CSRF gắn với session, không tự hết hạn sau 1 giờ (trang admin có thể mở lâu).
     WTF_CSRF_TIME_LIMIT = None
 
-     # --- Email xác thực đăng ký ---
-    # "console": chưa cấu hình SMTP thật -> ghi link xác thực ra log + file MAIL_OUTBOX_FILE.
+    # --- Email xác thực đăng ký ---
     # "smtp": gửi email thật bằng MAIL_SERVER/MAIL_USERNAME/MAIL_PASSWORD ở dưới.
-    MAIL_BACKEND = os.getenv("MAIL_BACKEND", "console")
-    MAIL_OUTBOX_FILE = os.getenv("MAIL_OUTBOX_FILE", ".dev_mail_outbox.log")
     MAIL_SERVER = os.getenv("MAIL_SERVER", "localhost")
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
@@ -42,33 +42,26 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
 
 
-class StagingConfig(BaseConfig):
-    """Cấu hình cho môi trường kiểm thử trước production."""
-
-    DEBUG = False
-    SESSION_COOKIE_SECURE = True
-
-    @classmethod
-    def validate(cls) -> None:
-        """Kiểm tra SECRET_KEY trước khi chạy staging."""
-        if cls.SECRET_KEY == "dev-only-secret-change-me":
-            raise RuntimeError("SECRET_KEY must be set in staging.")
-
-
 class ProductionConfig(BaseConfig):
-    """Cấu hình cho môi trường production."""
-
     DEBUG = False
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True  # cookie chỉ đi qua HTTPS
 
     @classmethod
     def validate(cls) -> None:
-        """Từ chối khởi động nếu quên đặt SECRET_KEY thật."""
+        """Từ chối khởi động production nếu quên đặt SECRET_KEY thật."""
         if cls.SECRET_KEY == "dev-only-secret-change-me":
             raise RuntimeError("SECRET_KEY must be set in production.")
 
+
+class TestingConfig(BaseConfig):
+    TESTING = True
+    WTF_CSRF_ENABLED = False  # test client không cần token CSRF
+    # Mặc định SQLite in-memory cho nhanh; đặt TEST_DATABASE_URL để test trên PostgreSQL thật.
+    SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL", "sqlite://")
+
+
 CONFIGS = {
     "development": DevelopmentConfig,
-    "staging": StagingConfig,
     "production": ProductionConfig,
+    "testing": TestingConfig,
 }

@@ -1,0 +1,44 @@
+{# admin/layout.html — Khung giao diện dành cho ADMIN (tách riêng khỏi khách).
+   Navbar bên phải: Dashboard (Hello Admin), Edit room, Logout. Không có Home/Rooms của khách.
+   File MỚI. #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# admin/rooms.js cần token này để gọi API /api/rooms #}
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}Admin - ET E4 Hotel{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="{{ url_for('admin_home.index') }}">ET E4 Hotel</a>
+
+    <nav class="site-nav" aria-label="Admin">
+      <a href="{{ url_for('admin_home.index') }}"
+         {% if request.endpoint == 'admin_home.index' %}aria-current="page"{% endif %}>Dashboard</a>
+      <a href="{{ url_for('admin_rooms.index') }}"
+         {% if request.endpoint == 'admin_rooms.index' %}aria-current="page"{% endif %}>Edit room</a>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary" type="submit">Logout</button>
+      </form>
+    </nav>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="banner banner-{{ category }}" role="alert">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

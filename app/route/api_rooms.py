@@ -1,5 +1,4 @@
-"""route/api_rooms.py — REST API JSON cho Room CRUD (chỉ admin).
-"""
+"""route/api_rooms.py — REST API JSON cho Room CRUD (chỉ admin)."""
 from flask import Blueprint, jsonify, request
 
 from app.services import room_service

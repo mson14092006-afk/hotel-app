@@ -37,12 +37,15 @@ def _register_blueprints(app: Flask) -> None:
     from app.route.api_rooms import bp as api_rooms_bp
     from app.route.auth import bp as auth_bp
     from app.route.main import bp as main_bp
+    from app.route.customer import bp as customer_bp
+    from app.route.admin_home import bp as admin_home_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_rooms_bp)
     app.register_blueprint(api_rooms_bp)
-
+    app.register_blueprint(customer_bp)
+    app.register_blueprint(admin_home_bp)
 
 def _register_error_handlers(app: Flask) -> None:
     """Trả JSON cho /api/*, trang HTML đơn giản cho các đường dẫn còn lại."""
