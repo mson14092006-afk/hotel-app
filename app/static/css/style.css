@@ -162,3 +162,29 @@ dialog::backdrop { background: rgba(27, 36, 48, 0.55); }
   .site-header { padding: 0.75rem 1rem; }
   .span-2, .span-3 { grid-column: span 6; }
 }
+
+/*Style cho user (rooms.html, room_detail.html, my_bookings.html)*/
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.room-card {
+  display: block;
+  padding: 1.25rem;
+  color: inherit;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.room-card:hover { border-color: var(--accent); }
+.room-card-name { font-size: 24px; margin-bottom: 0.5rem; }
+.room-card-price { font-weight: 700; color: var(--accent); }
+
+.badge-pending { color: #6b4700; background: #fbebc8; }
+.badge-confirmed { color: #14573a; background: #ddf3e7; }
+.badge-cancelled { color: #3b4553; background: #e6e9ee; }
+.badge-completed { color: #1d3f73; background: #dbe7fb; }
+*/

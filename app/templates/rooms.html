@@ -1,0 +1,23 @@
+{# rooms.html — Danh sách phòng đang mở bán, xem công khai (không cần đăng nhập). #}
+{% extends "base.html" %}
+{% block title %}Rooms - ET E4 Hotel{% endblock %}
+
+{% block content %}
+<section class="page">
+  <h1>Rooms</h1>
+
+  {% if rooms %}
+    <div class="room-grid">
+      {% for room in rooms %}
+        <a class="room-card" href="{{ url_for('customer.room_detail', room_id=room.id) }}">
+          <h2 class="room-card-name">{{ room.name }}</h2>
+          <p>{{ room.type|capitalize }} · Up to {{ room.capacity }} guest(s)</p>
+          <p class="room-card-price">{{ "{:,.0f}".format(room.price_per_night) }} VND / night</p>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No rooms available right now.</p>
+  {% endif %}
+</section>
+{% endblock %}

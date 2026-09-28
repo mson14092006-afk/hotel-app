@@ -1,0 +1,44 @@
+{# my_bookings.html — Danh sách booking của user đang đăng nhập, có nút huỷ. #}
+{% extends "base.html" %}
+{% block title %}My bookings - ET E4 Hotel{% endblock %}
+
+{% block content %}
+<section class="page">
+  <h1>My bookings</h1>
+
+  {% if bookings %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Room</th><th>Check-in</th><th>Check-out</th>
+            <th class="num">Guests</th><th class="num">Total (VND)</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for booking in bookings %}
+            <tr>
+              <td>{{ booking.room.name }}</td>
+              <td>{{ booking.check_in.strftime("%Y-%m-%d") }}</td>
+              <td>{{ booking.check_out.strftime("%Y-%m-%d") }}</td>
+              <td class="num">{{ booking.guests }}</td>
+              <td class="num">{{ "{:,.0f}".format(booking.total_price) }}</td>
+              <td><span class="badge badge-{{ booking.status }}">{{ booking.status|capitalize }}</span></td>
+              <td>
+                {% if booking.status in ("pending", "confirmed") %}
+                  <form method="post" action="{{ url_for('customer.cancel_booking', booking_id=booking.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-danger" type="submit">Cancel</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>You have no bookings yet. <a href="{{ url_for('customer.rooms') }}">Browse rooms</a>.</p>
+  {% endif %}
+</section>
+{% endblock %}
