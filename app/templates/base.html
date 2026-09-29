@@ -1,7 +1,7 @@
 {# base.html — Khung chung: header (tên khách sạn bên trái, menu bên phải) + vùng nội dung. #}
-{#
+
 {% extends "admin/layout.html" if current_user and current_user.is_admin else "client/layout.html" %}
-#}
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -22,6 +22,12 @@
     <nav class="site-nav" aria-label="Main">
       <a href="{{ url_for('main.home') }}"
          {% if request.endpoint == 'main.home' %}aria-current="page"{% endif %}>Home</a>
+
+      {# ==================================================================
+         MỚI — link Rooms / My bookings cho phần User. ĐANG COMMENT, CHƯA HIỆN.
+         Bỏ comment khối dưới sau khi đã bật blueprint customer trong
+         app/__init__.py, nếu không link sẽ bị lỗi "could not build url".
+         ================================================================== #}
       {#
       <a href="{{ url_for('customer.rooms') }}"
          {% if request.endpoint == 'customer.rooms' %}aria-current="page"{% endif %}>Rooms</a>

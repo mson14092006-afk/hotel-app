@@ -1,0 +1,17 @@
+.git
+.gitignore
+.github/
+
+__pycache__/
+*.py[cod]
+
+.pytest_cache/
+.venv/
+venv/
+
+tests/
+.env
+.env.*
+*.log
+
+migrations/**/__pycache__/

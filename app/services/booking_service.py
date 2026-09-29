@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models.booking import ACTIVE_BOOKING_STATUSES, STATUS_CANCELLED, STATUS_CONFIRMED, Booking
-from app.models.room import STATUS_ACTIVE, Room
+from app.models.room import ROOM_TYPES, STATUS_ACTIVE, Room
 from app.services.errors import NotFoundError, ValidationError
 
 MAX_STAY_NIGHTS = 30
@@ -24,13 +24,9 @@ def _parse_date(payload: dict, field: str, errors: dict):
         return None
 
 
-def _validate_booking_payload(payload: dict) -> dict:
-    if not isinstance(payload, dict):
-        raise ValidationError({"_": "Invalid form data."})
-
-    errors: dict[str, str] = {}
-    clean: dict = {}
-
+def _validate_stay_dates(payload: dict, errors: dict) -> dict:
+    """Kiểm tra cặp ngày check_in/check_out (dùng chung cho đặt phòng và tìm phòng).
+    Trả {"check_in": date, "check_out": date} nếu hợp lệ, ngược lại ghi lỗi vào `errors`."""
     check_in = _parse_date(payload, "check_in", errors)
     check_out = _parse_date(payload, "check_out", errors)
     if check_in and check_out:
@@ -41,8 +37,18 @@ def _validate_booking_payload(payload: dict) -> dict:
         elif (check_out - check_in).days > MAX_STAY_NIGHTS:
             errors["check_out"] = f"Stay cannot be longer than {MAX_STAY_NIGHTS} nights."
         else:
-            clean["check_in"] = check_in
-            clean["check_out"] = check_out
+            return {"check_in": check_in, "check_out": check_out}
+    return {}
+
+
+def _validate_booking_payload(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        raise ValidationError({"_": "Invalid form data."})
+
+    errors: dict[str, str] = {}
+    clean: dict = {}
+
+    clean.update(_validate_stay_dates(payload, errors))
 
     guests_raw = payload.get("guests")
     try:
@@ -76,6 +82,50 @@ def list_active_rooms():
     """Danh sách phòng đang mở bán, cho trang xem phòng công khai."""
     stmt = db.select(Room).where(Room.status == STATUS_ACTIVE).order_by(Room.price_per_night)
     return list(db.session.scalars(stmt))
+
+
+def search_rooms(room_type: str | None = None, check_in: str | None = None, check_out: str | None = None):
+    """Tìm phòng đang mở bán (status = active) theo loại phòng và/hoặc khoảng ngày.
+
+    - Không truyền gì: trả tất cả phòng active ("Khám phá").
+    - Truyền `room_type`: chỉ lấy loại đó (phải thuộc ROOM_TYPES).
+    - Truyền ngày: phải có CẢ check_in và check_out hợp lệ; chỉ giữ phòng còn ít nhất
+      1 unit trống trong cả khoảng ngày (số booking pending/confirmed giao khoảng đó < total_units).
+    Raise ValidationError nếu tham số sai. Ngày là chuỗi YYYY-MM-DD (lấy thẳng từ query string).
+    """
+    errors: dict[str, str] = {}
+    room_type = (room_type or "").strip()
+    check_in = (check_in or "").strip()
+    check_out = (check_out or "").strip()
+
+    if room_type and room_type not in ROOM_TYPES:
+        errors["type"] = "Unknown room type."
+    dates = {}
+    if check_in or check_out:
+        dates = _validate_stay_dates({"check_in": check_in, "check_out": check_out}, errors)
+    if errors:
+        raise ValidationError(errors)
+
+    stmt = db.select(Room).where(Room.status == STATUS_ACTIVE).order_by(Room.price_per_night)
+    if room_type:
+        stmt = stmt.where(Room.type == room_type)
+    rooms = list(db.session.scalars(stmt))
+
+    if dates:
+        # 1 query gộp: số booking đang giữ chỗ theo từng phòng trong khoảng ngày cần tìm
+        booked = dict(
+            db.session.execute(
+                db.select(Booking.room_id, func.count(Booking.id))
+                .where(
+                    Booking.status.in_(ACTIVE_BOOKING_STATUSES),
+                    Booking.check_in < dates["check_out"],
+                    Booking.check_out > dates["check_in"],
+                )
+                .group_by(Booking.room_id)
+            ).all()
+        )
+        rooms = [room for room in rooms if booked.get(room.id, 0) < room.total_units]
+    return rooms
 
 
 def get_bookable_room(room_id: int) -> Room:

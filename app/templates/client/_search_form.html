@@ -1,0 +1,22 @@
+{# client/_search_form.html — [CLIENT] Thanh tìm kiếm phòng (loại phòng + check-in + check-out). #}
+{% set f = form if form else {} %}
+<form method="get" action="{{ url_for('customer.rooms') }}" class="search-form" role="search">
+  <div class="field">
+    <label for="s-type">Room type</label>
+    <select id="s-type" name="type">
+      <option value="">Any type</option>
+      {% for t in room_types %}
+        <option value="{{ t }}" {% if f.get('type') == t %}selected{% endif %}>{{ t|capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="s-check-in">Check-in</label>
+    <input id="s-check-in" name="check_in" type="date" value="{{ f.get('check_in', '') }}">
+  </div>
+  <div class="field">
+    <label for="s-check-out">Check-out</label>
+    <input id="s-check-out" name="check_out" type="date" value="{{ f.get('check_out', '') }}">
+  </div>
+  <button class="btn btn-primary" type="submit">Search rooms</button>
+</form>

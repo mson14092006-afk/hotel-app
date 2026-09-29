@@ -1,6 +1,7 @@
 """route/customer.py — Trang cho khách hàng: xem phòng + đặt phòng + xem booking của mình."""
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
+from app.models.room import ROOM_TYPES
 from app.services import booking_service
 from app.services.errors import NotFoundError, ValidationError
 from app.utils.decorators import login_required
@@ -10,8 +11,16 @@ bp = Blueprint("customer", __name__)
 
 @bp.get("/rooms")
 def rooms():
-    """Danh sách phòng đang mở bán — xem công khai, không cần đăng nhập."""
-    return render_template("client/rooms.html", rooms=booking_service.list_active_rooms())
+    """Trang "Khám phá": các phòng còn trống, xem công khai (không cần đăng nhập)."""
+    args = request.args
+    try:
+        found = booking_service.search_rooms(args.get("type"), args.get("check_in"), args.get("check_out"))
+        errors, status = {}, 200
+    except ValidationError as exc:
+        found, errors, status = [], exc.errors, 422
+    return render_template(
+        "client/rooms.html", rooms=found, errors=errors, form=args, room_types=ROOM_TYPES
+    ), status
 
 
 @bp.get("/rooms/<int:room_id>")
@@ -22,7 +31,8 @@ def room_detail(room_id):
     except NotFoundError:
         flash("Room not found.", "error")
         return redirect(url_for("customer.rooms"))
-    return render_template("client/room_detail.html", room=room)
+    # form=request.args: nếu khách bấm vào phòng từ kết quả tìm kiếm thì điền sẵn ngày check-in/out
+    return render_template("client/room_detail.html", room=room, form=request.args)
 
 
 @bp.post("/rooms/<int:room_id>/book")

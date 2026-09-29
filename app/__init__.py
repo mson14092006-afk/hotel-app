@@ -1,4 +1,8 @@
-"""app/__init__.py """
+"""app/__init__.py — Application factory: lắp ráp toàn bộ ứng dụng Flask.
+
+Dùng factory (create_app) thay vì biến app toàn cục để có thể tạo nhiều instance
+với config khác nhau (dev, test, prod) và để test dễ hơn.
+"""
 import os
 
 from flask import Flask, jsonify, render_template, request
@@ -27,7 +31,6 @@ def create_app(config_name: str | None = None) -> Flask:
 
     _register_blueprints(app)
     _register_error_handlers(app)
-
     return app
 
 
@@ -39,6 +42,7 @@ def _register_blueprints(app: Flask) -> None:
     from app.route.main import bp as main_bp
     from app.route.customer import bp as customer_bp
     from app.route.admin_home import bp as admin_home_bp
+
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)

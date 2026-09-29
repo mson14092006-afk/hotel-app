@@ -1,4 +1,5 @@
-"""test_layouts.py — Test tách giao diện client / admin."""
+"""test_layouts.py — Test tách giao diện client / admin.
+"""
 import pytest
 from jinja2 import nodes
 
@@ -23,7 +24,8 @@ def _html(response):
 def test_anonymous_sees_client_navbar(client):
     html = _html(client.get("/"))
     assert "ET E4 Hotel" in html
-    assert 'href="/rooms"' in html
+    assert ">Home<" in html
+    assert "Khám phá" in html
     assert "Login" in html
     assert "Edit room" not in html
     assert "Hello Admin" not in html
@@ -31,10 +33,18 @@ def test_anonymous_sees_client_navbar(client):
 
 def test_customer_navbar_has_rooms_and_bookings_but_no_admin_link(customer_client):
     html = _html(customer_client.get("/"))
-    assert 'href="/rooms"' in html
+    assert "Khám phá" in html
     assert 'href="/my-bookings"' in html
     assert "Logout" in html
     assert "Edit room" not in html
+
+
+def test_client_home_has_welcome_and_search_bar(client):
+    html = _html(client.get("/"))
+    assert "Welcome to our hotel" in html
+    assert 'name="check_in"' in html and 'name="check_out"' in html
+    for room_type in ("single", "double", "twin", "family", "suite"):
+        assert f'value="{room_type}"' in html
 
 
 def test_customer_cannot_open_admin_pages(customer_client):
