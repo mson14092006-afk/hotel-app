@@ -1,4 +1,5 @@
-{# client/layout.html — Khung giao diện dành cho KHÁCH (customer hoặc chưa đăng nhập). #}
+{# client/layout.html — Khung giao diện dành cho khách (customer hoặc chưa đăng nhập).
+   Navbar bên phải: Home, Khám phá, My bookings (khi đã đăng nhập), Register/Login hoặc Logout. #}
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,15 +12,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {# CSS riêng của giao diện khách (thẻ phòng, thanh tìm kiếm, badge booking) #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/client.css') }}">
 </head>
 <body>
   <header class="site-header">
     <a class="brand" href="{{ url_for('main.home') }}">ET E4 Hotel</a>
 
     <nav class="site-nav" aria-label="Main">
-      {# "Book room" dẫn về trang chủ khách (Welcome + danh sách phòng để đặt) #}
       <a href="{{ url_for('main.home') }}"
-         {% if request.endpoint in ('main.home', 'customer.rooms', 'customer.room_detail') %}aria-current="page"{% endif %}>Book room</a>
+         {% if request.endpoint == 'main.home' %}aria-current="page"{% endif %}>Home</a>
+      {# Khám phá = các phòng còn trống (thay cho "Edit room" — Edit room chỉ có ở giao diện admin) #}
+      <a href="{{ url_for('customer.rooms') }}"
+         {% if request.endpoint in ('customer.rooms', 'customer.room_detail') %}aria-current="page"{% endif %}>Khám phá</a>
 
       {% if current_user %}
         <a href="{{ url_for('customer.my_bookings') }}"
