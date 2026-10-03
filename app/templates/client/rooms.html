@@ -9,11 +9,7 @@
   {% if rooms %}
     <div class="room-grid">
       {% for room in rooms %}
-        <a class="room-card" href="{{ url_for('customer.room_detail', room_id=room.id) }}">
-          <h2 class="room-card-name">{{ room.name }}</h2>
-          <p>{{ room.quality_label }} · {{ room.type|capitalize }} · {{ room.capacity }} guest(s)</p>
-          <p class="room-card-price">{{ "{:,.0f}".format(room.price_per_night) }} VND / night</p>
-        </a>
+        {% include "client/_room_card.html" %}
       {% endfor %}
     </div>
   {% else %}

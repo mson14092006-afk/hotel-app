@@ -1,4 +1,4 @@
-{# my_bookings.html — Danh sách booking của user đang đăng nhập, có nút huỷ. #}
+{# client/my_bookings.html — [CLIENT]  Danh sách booking của user đang đăng nhập, có nút huỷ. #}
 {% extends "client/layout.html" %}
 {% block title %}My bookings - ET E4 Hotel{% endblock %}
 
@@ -21,8 +21,8 @@
               <td>{{ booking.room.name }} ({{ booking.room.quality_label }} {{ booking.room.type }})</td>
               <td>{{ booking.customer_name }}</td>
               <td>{{ booking.phone }}</td>
-              <td>{{ booking.check_in.strftime("%Y-%m-%d") }}</td>
-              <td>{{ booking.check_out.strftime("%Y-%m-%d") }}</td>
+              <td>{{ booking.check_in.strftime("%d/%m/%Y") }}</td>
+              <td>{{ booking.check_out.strftime("%d/%m/%Y") }}</td>
               <td class="num">{{ "{:,.0f}".format(booking.total_price) }}</td>
               <td><span class="badge badge-{{ booking.status }}">{{ booking.status|capitalize }}</span></td>
               <td>

@@ -1,0 +1,8 @@
+<a class="room-card" href="{{ url_for('customer.room_detail', room_id=room.id) }}">
+  <h2 class="room-card-name">{{ room.name }}</h2>
+  <hr style="width: 3rem; margin: 0.5rem 0 0.75rem; border: 0; border-top: 3px solid var(--accent);">
+  <p><strong>Quality:</strong> {{ room.quality_label }}</p>
+  <p><strong>Type:</strong> {{ room.type|capitalize }}</p>
+  <p><strong>Number of guests:</strong> {{ room.capacity }}</p>
+  <p class="room-card-price">{{ "{:,.0f}".format(room.price_per_night) }} VND / night</p>
+</a>

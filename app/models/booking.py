@@ -1,17 +1,4 @@
-"""models/booking.py — Model Booking (bảng `bookings`).
-
-Một booking là một YÊU CẦU đặt phòng: tên khách + số điện thoại + hạng phòng
-(vd. A1 = VIP single, B4 = Standard family) + ngày đến / ngày đi. Admin sẽ xem,
-kiểm duyệt và tư vấn sau (status: pending -> confirmed / cancelled).
-Vẫn gắn với 1 user (tài khoản đang đăng nhập) để họ xem lại booking của mình.
-Số khách không lưu riêng: đã được quy định bởi loại phòng (room.capacity).
-Model chỉ mô tả bảng + ràng buộc; luật nghiệp vụ (kiểm tra còn phòng trống,
-tính total_price) nằm ở services/booking_service.py.
-
-File này là phần MỚI, không đụng tới model Room/User đã có — chỉ tham chiếu
-tới chúng qua ForeignKey + relationship (dùng tên chuỗi "User"/"Room" nên
-không cần sửa gì trong user.py hay room.py).
-"""
+"""models/booking.py — Model Booking (bảng `bookings`)."""
 from app.extensions import db
 
 STATUS_PENDING = "pending"      # khách vừa gửi yêu cầu, chờ admin xem xét
@@ -32,6 +19,7 @@ class Booking(db.Model):
     room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=False)
     customer_name = db.Column(db.String(120), nullable=False)  # tên khách (có thể khác username)
     phone = db.Column(db.String(20), nullable=False)           # số điện thoại để admin liên hệ
+    special_requests = db.Column(db.Text, nullable=True)       # yêu cầu đặc biệt cho khách sạn (không bắt buộc)
     check_in = db.Column(db.Date, nullable=False)
     check_out = db.Column(db.Date, nullable=False)
     # Chốt giá tại thời điểm đặt (không tính lại nếu admin đổi price_per_night sau này).
@@ -59,6 +47,7 @@ class Booking(db.Model):
             "room_name": self.room.name if self.room else None,
             "customer_name": self.customer_name,
             "phone": self.phone,
+            "special_requests": self.special_requests,
             "check_in": self.check_in.isoformat(),
             "check_out": self.check_out.isoformat(),
             "total_price": str(self.total_price),

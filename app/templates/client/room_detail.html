@@ -1,11 +1,14 @@
-{# room_detail.html — Chi tiết 1 phòng + form đặt phòng (cần đăng nhập mới đặt được). #}
+{# client/room_detail.html — [CLIENT]  Chi tiết 1 phòng + form đặt phòng (cần đăng nhập mới đặt được). #}
 {% extends "client/layout.html" %}
 {% block title %}{{ room.name }} - ET E4 Hotel{% endblock %}
 
 {% block content %}
 <section class="page page-narrow">
   <h1>{{ room.name }}</h1>
-  <p>{{ room.quality_label }} · {{ room.type|capitalize }} · {{ room.capacity }} guest(s)</p>
+  <hr style="width: 3rem; margin: 0.5rem 0 0.75rem; border: 0; border-top: 3px solid var(--accent);">
+  <p><strong>Quality:</strong> {{ room.quality_label }}</p>
+  <p><strong>Type:</strong> {{ room.type|capitalize }}</p>
+  <p><strong>Number of guests:</strong> {{ room.capacity }}</p>
   <p class="room-card-price">{{ "{:,.0f}".format(room.price_per_night) }} VND / night</p>
   {% if room.description %}<p>{{ room.description }}</p>{% endif %}
 
@@ -24,11 +27,17 @@
       </div>
       <div class="field">
         <label for="check_in">Check-in</label>
-        <input id="check_in" name="check_in" type="date" value="{{ form.get('check_in', '') if form }}" required>
+        <input id="check_in" name="check_in" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10"
+               value="{{ form.get('check_in', '') if form else '' }}" required>
       </div>
       <div class="field">
         <label for="check_out">Check-out</label>
-        <input id="check_out" name="check_out" type="date" value="{{ form.get('check_out', '') if form }}" required>
+        <input id="check_out" name="check_out" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10"
+               value="{{ form.get('check_out', '') if form else '' }}" required>
+      </div>
+      <div class="field">
+        <label for="special_requests">Special requests (optional)</label>
+        <textarea id="special_requests" name="special_requests" rows="3" maxlength="1000">{{ form.get('special_requests', '') if form else '' }}</textarea>
       </div>
       <button class="btn btn-primary" type="submit">Send booking request</button>
     </form>
