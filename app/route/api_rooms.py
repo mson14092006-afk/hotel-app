@@ -8,7 +8,7 @@ from app.utils.decorators import admin_required
 bp = Blueprint("api_rooms", __name__, url_prefix="/api/rooms")
 
 
-# Error mapping: Các lỗi được chuyển thành mã HTTP tương ứng -> frontend
+# Error mapping
 @bp.errorhandler(ValidationError)
 def handle_validation_error(exc: ValidationError):
     return jsonify(error="Validation failed.", fields=exc.errors), 422
@@ -34,6 +34,7 @@ def list_rooms():
         q=request.args.get("q"),
         status=request.args.get("status"),
         room_type=request.args.get("type"),
+        quality=request.args.get("quality"),  
     )
     return jsonify(items=[r.to_dict() for r in rooms], count=len(rooms))
 

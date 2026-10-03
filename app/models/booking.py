@@ -1,8 +1,21 @@
-"""models/booking.py — Model Booking (bảng `bookings`)."""
+"""models/booking.py — Model Booking (bảng `bookings`).
+
+Một booking là một YÊU CẦU đặt phòng: tên khách + số điện thoại + hạng phòng
+(vd. A1 = VIP single, B4 = Standard family) + ngày đến / ngày đi. Admin sẽ xem,
+kiểm duyệt và tư vấn sau (status: pending -> confirmed / cancelled).
+Vẫn gắn với 1 user (tài khoản đang đăng nhập) để họ xem lại booking của mình.
+Số khách không lưu riêng: đã được quy định bởi loại phòng (room.capacity).
+Model chỉ mô tả bảng + ràng buộc; luật nghiệp vụ (kiểm tra còn phòng trống,
+tính total_price) nằm ở services/booking_service.py.
+
+File này là phần MỚI, không đụng tới model Room/User đã có — chỉ tham chiếu
+tới chúng qua ForeignKey + relationship (dùng tên chuỗi "User"/"Room" nên
+không cần sửa gì trong user.py hay room.py).
+"""
 from app.extensions import db
 
-STATUS_PENDING = "pending"      # vừa đặt, chưa xác nhận
-STATUS_CONFIRMED = "confirmed"  # đã xác nhận (hiện tại: tự động xác nhận khi đặt)
+STATUS_PENDING = "pending"      # khách vừa gửi yêu cầu, chờ admin xem xét
+STATUS_CONFIRMED = "confirmed"  # admin đã xác nhận
 STATUS_CANCELLED = "cancelled"  # khách/admin huỷ
 STATUS_COMPLETED = "completed"  # đã trả phòng (đặt cho tương lai, chưa có luồng set)
 BOOKING_STATUSES = (STATUS_PENDING, STATUS_CONFIRMED, STATUS_CANCELLED, STATUS_COMPLETED)
@@ -17,7 +30,8 @@ class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=False)
-    guests = db.Column(db.Integer, nullable=False)
+    customer_name = db.Column(db.String(120), nullable=False)  # tên khách (có thể khác username)
+    phone = db.Column(db.String(20), nullable=False)           # số điện thoại để admin liên hệ
     check_in = db.Column(db.Date, nullable=False)
     check_out = db.Column(db.Date, nullable=False)
     # Chốt giá tại thời điểm đặt (không tính lại nếu admin đổi price_per_night sau này).
@@ -30,7 +44,6 @@ class Booking(db.Model):
     room = db.relationship("Room", backref=db.backref("bookings", lazy="dynamic"))
 
     __table_args__ = (
-        db.CheckConstraint("guests > 0", name="guests_positive"),
         db.CheckConstraint("check_out > check_in", name="checkout_after_checkin"),
         db.CheckConstraint("total_price > 0", name="total_price_positive"),
         db.CheckConstraint(
@@ -44,7 +57,8 @@ class Booking(db.Model):
             "id": self.id,
             "room_id": self.room_id,
             "room_name": self.room.name if self.room else None,
-            "guests": self.guests,
+            "customer_name": self.customer_name,
+            "phone": self.phone,
             "check_in": self.check_in.isoformat(),
             "check_out": self.check_out.isoformat(),
             "total_price": str(self.total_price),

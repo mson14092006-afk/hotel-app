@@ -1,17 +1,27 @@
 {# room_detail.html — Chi tiết 1 phòng + form đặt phòng (cần đăng nhập mới đặt được). #}
-{% extends "base.html" %}
+{% extends "client/layout.html" %}
 {% block title %}{{ room.name }} - ET E4 Hotel{% endblock %}
 
 {% block content %}
 <section class="page page-narrow">
   <h1>{{ room.name }}</h1>
-  <p>{{ room.type|capitalize }} · Up to {{ room.capacity }} guest(s) · {{ room.total_units }} unit(s)</p>
+  <p>{{ room.quality_label }} · {{ room.type|capitalize }} · {{ room.capacity }} guest(s)</p>
   <p class="room-card-price">{{ "{:,.0f}".format(room.price_per_night) }} VND / night</p>
   {% if room.description %}<p>{{ room.description }}</p>{% endif %}
 
   {% if current_user %}
     <form method="post" action="{{ url_for('customer.book_room', room_id=room.id) }}" class="login-form" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="customer_name">Your name</label>
+        <input id="customer_name" name="customer_name" maxlength="120"
+               value="{{ form.get('customer_name', '') if form else '' }}" required>
+      </div>
+      <div class="field">
+        <label for="phone">Phone number</label>
+        <input id="phone" name="phone" type="tel" maxlength="20"
+               value="{{ form.get('phone', '') if form else '' }}" required>
+      </div>
       <div class="field">
         <label for="check_in">Check-in</label>
         <input id="check_in" name="check_in" type="date" value="{{ form.get('check_in', '') if form }}" required>
@@ -20,12 +30,7 @@
         <label for="check_out">Check-out</label>
         <input id="check_out" name="check_out" type="date" value="{{ form.get('check_out', '') if form }}" required>
       </div>
-      <div class="field">
-        <label for="guests">Guests</label>
-        <input id="guests" name="guests" type="number" min="1" max="{{ room.capacity }}"
-               value="{{ form.get('guests', 1) if form else 1 }}" required>
-      </div>
-      <button class="btn btn-primary" type="submit">Book this room</button>
+      <button class="btn btn-primary" type="submit">Send booking request</button>
     </form>
   {% else %}
     <p class="helper-text">
