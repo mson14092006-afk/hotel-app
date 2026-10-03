@@ -108,6 +108,7 @@
       row.append(
         cell(room.id, "num"),
         cell(room.name),
+        cell(`${room.quality} - ${room.quality_label}`),  
         cell(capitalize(room.type)),
         cell(room.capacity, "num"),
         cell(room.total_units, "num"),
@@ -154,16 +155,15 @@
 
     if (room) {
       const f = els.form.elements;
-      f["name"].value = room.name;
+      f["quality"].value = room.quality;  
       f["type"].value = room.type;
       f["status"].value = room.status;
-      f["capacity"].value = room.capacity;
       f["total_units"].value = room.total_units;
       f["price_per_night"].value = String(Number(room.price_per_night));
       f["description"].value = room.description || "";
     }
     els.dialog.showModal();
-    els.form.elements["name"].focus();
+    els.form.elements["quality"].focus();  
   }
 
   function showFormErrors(error) {
@@ -182,10 +182,9 @@
 
     const f = els.form.elements;
     const payload = {
-      name: f["name"].value,
+      quality: f["quality"].value,  
       type: f["type"].value,
       status: f["status"].value,
-      capacity: f["capacity"].value,
       total_units: f["total_units"].value,
       price_per_night: f["price_per_night"].value,
       description: f["description"].value,

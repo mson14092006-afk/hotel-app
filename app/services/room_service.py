@@ -4,12 +4,18 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models.room import ROOM_STATUSES, ROOM_TYPES, STATUS_ACTIVE, Room
+from app.models.room import (  
+    ROOM_QUALITIES,  
+    ROOM_STATUSES,  
+    ROOM_TYPES,  
+    STATUS_ACTIVE, 
+    TYPE_CAPACITY,  
+    Room,  
+    room_code,  
+)  
 from app.services.errors import ConflictError, NotFoundError, ValidationError
 
-NAME_MAX = 120
 DESCRIPTION_MAX = 2000
-CAPACITY_MAX = 20
 UNITS_MAX = 1000
 PRICE_MAX = Decimal("9999999999.99")  # vừa với Numeric(12, 2)
 
@@ -61,8 +67,8 @@ def _parse_price(payload: dict, errors: dict):
 def validate_room_payload(payload, default_status: str = STATUS_ACTIVE) -> dict:
     """Kiểm tra + làm sạch dữ liệu phòng. Trả dict sạch hoặc raise ValidationError.
 
-    Chỉ lấy các field nằm trong whitelist (bỏ qua `id` và field lạ) để client
-    không ghi đè được thứ nó không được phép.
+    Chỉ lấy các field nằm trong whitelist (bỏ qua `id`, `name`, `capacity` và field lạ)  
+    để client không ghi đè được thứ nó không được phép.  # <== MỚI SỬA
     """
     if not isinstance(payload, dict):
         raise ValidationError({"_": "Request body must be a JSON object."})
@@ -70,26 +76,26 @@ def validate_room_payload(payload, default_status: str = STATUS_ACTIVE) -> dict:
     errors: dict[str, str] = {}
     clean: dict = {}
 
-    # name
-    name = payload.get("name")
-    if not isinstance(name, str) or not name.strip():
-        errors["name"] = "Name is required."
-    elif len(name.strip()) > NAME_MAX:
-        errors["name"] = f"Name must be at most {NAME_MAX} characters."
+    # quality: A (VIP) | B (Standard)  # <== MỚI SỬA
+    quality = payload.get("quality")  # <== MỚI SỬA
+    if quality not in ROOM_QUALITIES:  # <== MỚI SỬA
+        errors["quality"] = "Quality must be one of: " + ", ".join(ROOM_QUALITIES) + " (A = VIP, B = Standard)."  
     else:
-        clean["name"] = name.strip()
+        clean["quality"] = quality  # <== MỚI SỬA
 
-    # type
+    # type: single | double | family  # <== MỚI SỬA
     room_type = payload.get("type")
     if room_type not in ROOM_TYPES:
         errors["type"] = "Type must be one of: " + ", ".join(ROOM_TYPES) + "."
     else:
         clean["type"] = room_type
 
-    # capacity, total_units, price_per_night
-    capacity = _parse_int(payload, "capacity", "Capacity", CAPACITY_MAX, errors)
-    if capacity is not None:
-        clean["capacity"] = capacity
+    # name và capacity KHÔNG nhận từ client: sinh từ quality + type (A1, B4, ...)  
+    if "quality" in clean and "type" in clean:  # <== MỚI SỬA
+        clean["name"] = room_code(clean["quality"], clean["type"])  #
+        clean["capacity"] = TYPE_CAPACITY[clean["type"]]  
+
+    # total_units, price_per_night  # <== MỚI SỬA
     units = _parse_int(payload, "total_units", "Total units", UNITS_MAX, errors)
     if units is not None:
         clean["total_units"] = units
@@ -123,13 +129,20 @@ def validate_room_payload(payload, default_status: str = STATUS_ACTIVE) -> dict:
 
 
 # CRUD
-def list_rooms(q: str | None = None, status: str | None = None, room_type: str | None = None):
-    """Danh sách phòng, lọc tuỳ chọn theo tên (chứa q), status, type."""
+def list_rooms(  
+    q: str | None = None,  
+    status: str | None = None,  
+    room_type: str | None = None, 
+    quality: str | None = None,  
+):  
+    """Danh sách phòng, lọc tuỳ chọn theo tên (chứa q), status, type, quality."""  
     errors = {}
     if status and status not in ROOM_STATUSES:
         errors["status"] = "Unknown status."
     if room_type and room_type not in ROOM_TYPES:
         errors["type"] = "Unknown type."
+    if quality and quality not in ROOM_QUALITIES:  
+        errors["quality"] = "Unknown quality."  
     if errors:
         raise ValidationError(errors)
 
@@ -141,6 +154,8 @@ def list_rooms(q: str | None = None, status: str | None = None, room_type: str |
         stmt = stmt.where(Room.status == status)
     if room_type:
         stmt = stmt.where(Room.type == room_type)
+    if quality: 
+        stmt = stmt.where(Room.quality == quality)  #
     return list(db.session.scalars(stmt))
 
 
@@ -181,10 +196,11 @@ def delete_room(room_id: int) -> None:
 
 
 def _commit() -> None:
-    """Commit; dịch lỗi trùng tên của DB thành ConflictError thân thiện.
+    """Commit; dịch lỗi trùng hạng phòng của DB thành ConflictError thân thiện.  
 
+    Tên phòng sinh từ quality + type nên "trùng tên" nghĩa là hạng phòng đó đã tồn tại.  
     Dựa vào UNIQUE constraint ở DB (thay vì check-rồi-insert) nên không bị race
-    condition khi hai admin tạo cùng tên một lúc.
+    condition khi hai admin tạo cùng hạng một lúc.  # <== MỚI SỬA
     """
     try:
         db.session.commit()
@@ -192,5 +208,9 @@ def _commit() -> None:
         db.session.rollback()
         message = str(exc.orig)
         if "uq_rooms_name" in message or "rooms.name" in message:
-            raise ConflictError("A room with this name already exists.", field="name") from exc
+            raise ConflictError( 
+                "This quality + type combination already exists. Edit the existing room instead.",  
+                field="type",  
+            ) from exc  
         raise
+

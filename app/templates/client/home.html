@@ -1,22 +1,28 @@
-{# client/home.html — [CLIENT] Trang chủ của KHÁCH: "Welcome to our hotel" + thanh tìm kiếm phòng.
-   Route (main.py) cần truyền room_types. File MỚI. #}
+{# client/home.html — Trang chủ của client #}
 {% extends "client/layout.html" %}
 {% block title %}Welcome - ET E4 Hotel{% endblock %}
 
 {% block content %}
 <section class="hero">
-  <h1>Welcome to our hotel</h1>
-</section>
-
-<section class="page">
-  {% include "client/_search_form.html" %}
+  <h1>Welcome</h1>
 </section>
 
 <section class="hotel-description">
-  {#
-    TODO: ĐIỀN MÔ TẢ KHÁCH SẠN Ở ĐÂY (bỏ comment và sửa nội dung):
+  </section>
 
-    <p>Giới thiệu ngắn về khách sạn (vị trí, phong cách, đối tượng khách).</p>
-  #}
+<section class="page">
+  {% if rooms %}
+    <div class="room-grid">
+      {% for room in rooms %}
+        <a class="room-card" href="{{ url_for('customer.room_detail', room_id=room.id) }}">
+          <h2 class="room-card-name">{{ room.name }}</h2>
+          <p>{{ room.quality_label }} · {{ room.type|capitalize }} · {{ room.capacity }} guest(s)</p>
+          <p class="room-card-price">{{ "{:,.0f}".format(room.price_per_night) }} VND / night</p>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No rooms available right now.</p>
+  {% endif %}
 </section>
 {% endblock %}

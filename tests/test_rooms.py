@@ -1,9 +1,9 @@
 """test_rooms.py — Test Room CRUD (API + phân quyền + đăng nhập)."""
 
+# Admin chỉ gửi quality + type; name (A1, B2...) và capacity được server sinh ra.  # <== MỚI SỬA
 VALID = {
-    "name": "Deluxe Twin",
-    "type": "twin",
-    "capacity": 2,
+    "quality": "B",  
+    "type": "double",  
     "total_units": 5,
     "price_per_night": "1200000",
     "status": "active",
@@ -55,7 +55,18 @@ def test_create_room(admin_client):
     assert body["id"] == 1
     assert body["price_per_night"] == "1200000.00"
     assert body["status"] == "active"
+    # B (Standard) + double (2 người) -> tên B2, sức chứa 2  
+    assert body["name"] == "B2"  # <== MỚI SỬA
+    assert body["capacity"] == 2  # <== MỚI SỬA
+    assert body["quality_label"] == "Standard"  
 
+
+def test_name_and_capacity_are_generated_not_taken_from_client(admin_client):  
+    body = create(admin_client, quality="A", type="family", name="Hacked", capacity=99).get_json() 
+    assert body["name"] == "A4"  
+    assert body["capacity"] == 4  
+    assert create(admin_client, quality="A", type="single").get_json()["name"] == "A1" 
+    assert create(admin_client, quality="B", type="single").get_json()["name"] == "B1"  
 
 def test_create_defaults_status_and_nulls_blank_description(admin_client):
     payload = {k: v for k, v in VALID.items() if k != "status"}
@@ -68,42 +79,46 @@ def test_create_defaults_status_and_nulls_blank_description(admin_client):
 def test_create_validation_errors(admin_client):
     response = admin_client.post(
         "/api/rooms",
-        json={"name": " ", "type": "castle", "capacity": 0, "total_units": "x",
+        json={"quality": "C", "type": "castle", "total_units": "x",  
               "price_per_night": -5, "status": "??"},
     )
     assert response.status_code == 422
     fields = response.get_json()["fields"]
-    assert set(fields) == {"name", "type", "capacity", "total_units", "price_per_night", "status"}
+    assert set(fields) == {"quality", "type", "total_units", "price_per_night", "status"} 
 
 
 def test_create_rejects_bad_types(admin_client):
-    assert create(admin_client, capacity=True).status_code == 422
-    assert create(admin_client, capacity=2.5).status_code == 422
+    assert create(admin_client, total_units=True).status_code == 422 
+    assert create(admin_client, total_units=2.5).status_code == 422  
+    assert create(admin_client, type="twin").status_code == 422  # loại cũ không còn hợp lệ  
     assert create(admin_client, price_per_night="NaN").status_code == 422
     assert create(admin_client, price_per_night="1e20").status_code == 422
     assert admin_client.post("/api/rooms", data="not json").status_code == 422
 
 
-def test_create_duplicate_name(admin_client):
+def test_create_duplicate_room_class(admin_client): 
     assert create(admin_client).status_code == 201
-    response = create(admin_client)
+    response = create(admin_client)  # cùng quality + type -> cùng tên B2  
     assert response.status_code == 409
-    assert "name" in response.get_json()["fields"]
+    assert "type" in response.get_json()["fields"] 
 
 
 # ------------------------------------------------------------------- Read/List
 def test_list_and_filters(admin_client):
-    create(admin_client, name="Deluxe Twin", type="twin")
-    create(admin_client, name="Family 100%", type="family", status="maintenance")
-    create(admin_client, name="Suite Lake", type="suite")
+    create(admin_client, quality="B", type="double")                          # B2  
+    create(admin_client, quality="B", type="family", status="maintenance")    # B4  
+    create(admin_client, quality="A", type="single")                          # A1 
 
     assert admin_client.get("/api/rooms").get_json()["count"] == 3
-    assert admin_client.get("/api/rooms?q=lake").get_json()["count"] == 1
+    assert admin_client.get("/api/rooms?q=a1").get_json()["count"] == 1  
     assert admin_client.get("/api/rooms?type=family").get_json()["count"] == 1
+    assert admin_client.get("/api/rooms?quality=B").get_json()["count"] == 2 
+    assert admin_client.get("/api/rooms?quality=A&type=single").get_json()["count"] == 1  
     assert admin_client.get("/api/rooms?status=maintenance").get_json()["count"] == 1
     # '%' do người dùng gõ được coi là ký tự thường, không phải wildcard
-    assert admin_client.get("/api/rooms?q=%25").get_json()["count"] == 1
+    assert admin_client.get("/api/rooms?q=%25").get_json()["count"] == 0  
     assert admin_client.get("/api/rooms?status=bogus").status_code == 422
+    assert admin_client.get("/api/rooms?quality=Z").status_code == 422  
 
 
 def test_get_room_and_404(admin_client):
@@ -118,20 +133,21 @@ def test_get_room_and_404(admin_client):
 def test_update_room(admin_client):
     room_id = create(admin_client, status="maintenance").get_json()["id"]
     payload = {k: v for k, v in VALID.items() if k != "status"}
-    payload.update(name="Deluxe Twin Plus", price_per_night="1350000.50")
+    payload.update(quality="A", type="family", price_per_night="1350000.50") 
 
     response = admin_client.put(f"/api/rooms/{room_id}", json=payload)
     body = response.get_json()
     assert response.status_code == 200
-    assert body["name"] == "Deluxe Twin Plus"
+    assert body["name"] == "A4"  # đổi quality/type -> tên + sức chứa tự đổi theo 
+    assert body["capacity"] == 4 
     assert body["price_per_night"] == "1350000.50"
     assert body["status"] == "maintenance"  # thiếu status -> giữ nguyên
 
 
-def test_update_to_duplicate_name(admin_client):
-    create(admin_client, name="A")
-    room_b = create(admin_client, name="B").get_json()["id"]
-    response = admin_client.put(f"/api/rooms/{room_b}", json={**VALID, "name": "A"})
+def test_update_to_duplicate_room_class(admin_client):  
+    create(admin_client, quality="A", type="single") 
+    room_b = create(admin_client, quality="B", type="single").get_json()["id"]  
+    response = admin_client.put(f"/api/rooms/{room_b}", json={**VALID, "quality": "A", "type": "single"})  
     assert response.status_code == 409
 
 
