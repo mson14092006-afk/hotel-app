@@ -1,37 +1,30 @@
-{# home.html — Trang chủ: tiêu đề ở giữa + phần mô tả khách sạn (để trống cho bạn điền). #}
-{% extends "base.html" %}
+{% extends "admin/layout.html" %}
+{% block title %}Dashboard - ET E4 Hotel{% endblock %}
 
 {% block content %}
-{#
-{% if current_user and current_user.is_admin %}
-<section class="hero">
-  <h1>Hello Admin</h1>
-</section>
-{% else %}
-<section class="hero">
-  <h1>ET E4 Hotel</h1>
-</section>
+<section class="page">
+  <h1>Dashboard</h1>
+  <p><a class="btn btn-primary" href="{{ url_for('admin_rooms.index') }}">Edit room &rarr;</a></p>
 
-<section class="hotel-description">
-  <!-- TODO: ĐIỀN MÔ TẢ KHÁCH SẠN Ở ĐÂY.
-       Gợi ý cấu trúc (xoá dòng comment HTML này và sửa nội dung):
-       <p>Giới thiệu ngắn về khách sạn (vị trí, phong cách, đối tượng khách).</p>
-       <p>Tiện nghi nổi bật (bữa sáng, wifi, đưa đón, ...).</p> -->
-</section>
-{% endif %}
-#}
-
-<section class="hero">
-  <h1>ET E4 Hotel</h1>
-</section>
-
-<section class="hotel-description">
-  {#
-    TODO: ĐIỀN MÔ TẢ KHÁCH SẠN Ở ĐÂY.
-    Gợi ý cấu trúc (bỏ comment và sửa nội dung):
-
-    <p>Giới thiệu ngắn về khách sạn (vị trí, phong cách, đối tượng khách).</p>
-    <p>Tiện nghi nổi bật (bữa sáng, wifi, đưa đón, ...).</p>
-  #}
+  <h2>Booking requests</h2>
+  {% if bookings %}
+    <div class="room-grid">
+      {% for booking in bookings %}
+        <article class="room-card">
+          <p><strong>Room name:</strong> {{ booking.room.name }} ({{ booking.room.quality_label }} · {{ booking.room.type|capitalize }})</p>
+          <p><strong>Customer name:</strong> {{ booking.customer_name }}</p>
+          <p><strong>Phone:</strong> {{ booking.phone }}</p>
+          <p><strong>Check-in:</strong> {{ booking.check_in.strftime("%d/%m/%Y") }}</p>
+          <p><strong>Check-out:</strong> {{ booking.check_out.strftime("%d/%m/%Y") }}</p>
+          <p style="white-space: pre-line;"><strong>Special requests:</strong> {{ booking.special_requests or "None" }}</p>
+          <p><strong>Total:</strong> {{ "{:,.0f}".format(booking.total_price) }} VND</p>
+          <p><strong>Status:</strong> <span class="badge badge-{{ booking.status }}">{{ booking.status|capitalize }}</span></p>
+          <p><strong>Account:</strong> {{ booking.user.username }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No booking requests yet.</p>
+  {% endif %}
 </section>
 {% endblock %}

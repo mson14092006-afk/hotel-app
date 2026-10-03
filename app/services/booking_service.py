@@ -1,19 +1,20 @@
 """services/booking_service.py — Business logic cho Booking (xem phòng trống, đặt phòng, huỷ)."""
-import re  
+import re
 from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models.booking import ACTIVE_BOOKING_STATUSES, STATUS_CANCELLED, STATUS_PENDING, Booking  
+from app.models.booking import ACTIVE_BOOKING_STATUSES, STATUS_CANCELLED, STATUS_PENDING, Booking
 from app.models.room import STATUS_ACTIVE, Room
 from app.services.errors import NotFoundError, ValidationError
 
 MAX_STAY_NIGHTS = 30
-CUSTOMER_NAME_MAX = 120  
-# Số điện thoại: sau khi bỏ khoảng trắng/dấu chấm/gạch ngang, chỉ gồm 9-15 chữ số (cho phép + đầu). 
-PHONE_PATTERN = re.compile(r"^\+?\d{9,15}$")  # <== MỚI SỬA
+CUSTOMER_NAME_MAX = 120
+SPECIAL_REQUESTS_MAX = 1000
+# Số điện thoại: sau khi bỏ khoảng trắng/dấu chấm/gạch ngang, chỉ gồm 9-15 chữ số (cho phép + đầu).
+PHONE_PATTERN = re.compile(r"^\+?\d{9,15}$")
 
 
 def _parse_date(payload: dict, field: str, errors: dict):
@@ -21,11 +22,15 @@ def _parse_date(payload: dict, field: str, errors: dict):
     if not raw:
         errors[field] = f"{field} is required."
         return None
-    try:
-        return datetime.strptime(str(raw).strip(), "%Y-%m-%d").date()
-    except ValueError:
-        errors[field] = f"{field} must be a valid date (YYYY-MM-DD)."
-        return None
+    text = str(raw).strip()
+    # Khách nhập ngày/tháng/năm (dd/mm/yyyy); vẫn chấp nhận yyyy-mm-dd để tương thích.
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    errors[field] = f"{field} must be a valid date (dd/mm/yyyy)."
+    return None
 
 
 def _validate_booking_payload(payload: dict) -> dict:
@@ -48,23 +53,33 @@ def _validate_booking_payload(payload: dict) -> dict:
             clean["check_in"] = check_in
             clean["check_out"] = check_out
 
-    name = payload.get("customer_name")  
-    if not isinstance(name, str) or not name.strip():  
-        errors["customer_name"] = "Your name is required."  
-    elif len(name.strip()) > CUSTOMER_NAME_MAX:  
-        errors["customer_name"] = f"Name must be at most {CUSTOMER_NAME_MAX} characters."  
-    else:  
-        clean["customer_name"] = name.strip()  
+    name = payload.get("customer_name")
+    if not isinstance(name, str) or not name.strip():
+        errors["customer_name"] = "Your name is required."
+    elif len(name.strip()) > CUSTOMER_NAME_MAX:
+        errors["customer_name"] = f"Name must be at most {CUSTOMER_NAME_MAX} characters."
+    else:
+        clean["customer_name"] = name.strip()
 
-    phone_raw = payload.get("phone")  
-    if not isinstance(phone_raw, str) or not phone_raw.strip():  
-        errors["phone"] = "Phone number is required."  
-    else:  
-        phone = re.sub(r"[\s.\-()]", "", phone_raw)  
+    phone_raw = payload.get("phone")
+    if not isinstance(phone_raw, str) or not phone_raw.strip():
+        errors["phone"] = "Phone number is required."
+    else:
+        phone = re.sub(r"[\s.\-()]", "", phone_raw)
         if PHONE_PATTERN.match(phone):
-            clean["phone"] = phone  
-        else:  
-            errors["phone"] = "Phone number must have 9-15 digits (a leading + is allowed)."  
+            clean["phone"] = phone
+        else:
+            errors["phone"] = "Phone number must have 9-15 digits (a leading + is allowed)."
+
+    special = payload.get("special_requests")
+    if special is None or (isinstance(special, str) and not special.strip()):
+        clean["special_requests"] = None
+    elif not isinstance(special, str):
+        errors["special_requests"] = "Special requests must be text."
+    elif len(special.strip()) > SPECIAL_REQUESTS_MAX:
+        errors["special_requests"] = f"Special requests must be at most {SPECIAL_REQUESTS_MAX} characters."
+    else:
+        clean["special_requests"] = special.strip()
 
     if errors:
         raise ValidationError(errors)
@@ -99,11 +114,11 @@ def get_bookable_room(room_id: int) -> Room:
 
 
 def create_booking(user, room_id: int, payload: dict) -> Booking:
-    """Validate + tạo yêu cầu đặt phòng (status pending) cho `user` hiện tại.  # <== MỚI SỬA
+    """Validate + tạo yêu cầu đặt phòng (status pending) cho `user` hiện tại.
 
-    Số khách không nhập: loại phòng đã quy định (A1 = 1 người, B4 = 4 người...).  # <== MỚI SỬA
-    Raise ValidationError nếu dữ liệu sai hoặc hết phòng trong khoảng ngày đó.  # <== MỚI SỬA
-    """  # <== MỚI SỬA
+    Số khách không nhập: loại phòng đã quy định (A1 = 1 người, B4 = 4 người...).
+    Raise ValidationError nếu dữ liệu sai hoặc hết phòng trong khoảng ngày đó.
+    """
     room = get_bookable_room(room_id)
     data = _validate_booking_payload(payload)
 
@@ -117,16 +132,22 @@ def create_booking(user, room_id: int, payload: dict) -> Booking:
     booking = Booking(
         user_id=user.id,
         room_id=room.id,
-        customer_name=data["customer_name"],  
-        phone=data["phone"],  
+        customer_name=data["customer_name"],
+        phone=data["phone"],
+        special_requests=data["special_requests"],
         check_in=data["check_in"],
         check_out=data["check_out"],
         total_price=total_price,
-        status=STATUS_PENDING,  # chờ admin xem xét / tư vấn rồi mới xác nhận  # <== MỚI SỬA
+        status=STATUS_PENDING,  # chờ admin xem xét / tư vấn rồi mới xác nhận
     )
     db.session.add(booking)
     db.session.commit()
     return booking
+
+
+def list_all_bookings():
+    """Tất cả yêu cầu đặt phòng (mới nhất trước) cho Dashboard của admin."""
+    return list(db.session.scalars(db.select(Booking).order_by(Booking.id.desc())))
 
 
 def list_user_bookings(user):
