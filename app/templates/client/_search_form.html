@@ -1,22 +1,63 @@
-{# client/_search_form.html — [CLIENT] Thanh tìm kiếm phòng (loại phòng + check-in + check-out). #}
+{# client/_search_form.html — [CLIENT] Thanh tìm kiếm phòng (chất lượng + loại phòng + check-in + check-out). #}
 {% set f = form if form else {} %}
+{% set types = room_types if room_types else ['single', 'double', 'family'] %}
+<style>
+  form.search-form { display: grid !important; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; align-items: end; }
+  form.search-form .field { margin: 0; min-width: 0; }
+  form.search-form select,
+  form.search-form input { width: 100%; box-sizing: border-box; }
+  form.search-form button { grid-column: 1 / -1; }
+  @media (max-width: 480px) { form.search-form { grid-template-columns: 1fr; } }
+</style>
 <form method="get" action="{{ url_for('customer.rooms') }}" class="search-form" role="search">
+  <div class="field">
+    <label for="s-quality">Quality</label>
+    <select id="s-quality" name="quality">
+      <option value="">Any quality</option>
+      <option value="A" {% if f.get('quality') == 'A' %}selected{% endif %}>VIP (A)</option>
+      <option value="B" {% if f.get('quality') == 'B' %}selected{% endif %}>Standard (B)</option>
+    </select>
+  </div>
   <div class="field">
     <label for="s-type">Room type</label>
     <select id="s-type" name="type">
       <option value="">Any type</option>
-      {% for t in room_types %}
+      {% for t in types %}
         <option value="{{ t }}" {% if f.get('type') == t %}selected{% endif %}>{{ t|capitalize }}</option>
       {% endfor %}
     </select>
   </div>
   <div class="field">
     <label for="s-check-in">Check-in</label>
-    <input id="s-check-in" name="check_in" type="date" value="{{ f.get('check_in', '') }}">
+    <input id="s-check-in" name="check_in" type="text" placeholder="dd/mm/yyyy" autocomplete="off" value="{{ f.get('check_in', '') }}">
   </div>
   <div class="field">
     <label for="s-check-out">Check-out</label>
-    <input id="s-check-out" name="check_out" type="date" value="{{ f.get('check_out', '') }}">
+    <input id="s-check-out" name="check_out" type="text" placeholder="dd/mm/yyyy" autocomplete="off" value="{{ f.get('check_out', '') }}">
   </div>
   <button class="btn btn-primary" type="submit">Search rooms</button>
 </form>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script>
+(function () {
+  const inEl = document.getElementById("s-check-in");
+  const outEl = document.getElementById("s-check-out");
+  if (!inEl || !outEl || typeof flatpickr === "undefined") return;
+  const earliest = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);  // đặt phòng cần trước ít nhất 7 ngày
+  const options = { dateFormat: "d/m/Y", allowInput: false, locale: { firstDayOfWeek: 1 } };
+
+  const outPicker = flatpickr(outEl, { ...options, minDate: earliest });
+  flatpickr(inEl, {
+    ...options,
+    minDate: earliest,
+    onChange(selected) {
+      if (!selected.length) return;
+      const nextDay = new Date(selected[0]);
+      nextDay.setDate(nextDay.getDate() + 1);
+      outPicker.set("minDate", nextDay);
+      if (outPicker.selectedDates.length && outPicker.selectedDates[0] < nextDay) outPicker.clear();
+    },
+  });
+})();
+</script>

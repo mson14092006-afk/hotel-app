@@ -1,4 +1,5 @@
-{# client/home.html — Trang chủ của client #}
+{# client/home.html — [CLIENT]  Trang chủ của KHÁCH: dòng "Welcome" + danh sách phòng đang mở bán
+   (do admin đăng, status = active). Bấm vào phòng để xem chi tiết và đặt. File MỚI. #}
 {% extends "client/layout.html" %}
 {% block title %}Welcome - ET E4 Hotel{% endblock %}
 
@@ -8,9 +9,16 @@
 </section>
 
 <section class="hotel-description">
-  </section>
+  {#
+    TODO: ĐIỀN MÔ TẢ KHÁCH SẠN Ở ĐÂY (bỏ comment và sửa nội dung):
+
+    <p>Giới thiệu ngắn về khách sạn (vị trí, phong cách, đối tượng khách).</p>
+  #}
+</section>
 
 <section class="page">
+  {% include "client/_search_form.html" %}
+
   {% if rooms %}
     <div class="room-grid">
       {% for room in rooms %}

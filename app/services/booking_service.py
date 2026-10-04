@@ -1,20 +1,38 @@
 """services/booking_service.py — Business logic cho Booking (xem phòng trống, đặt phòng, huỷ)."""
 import re
-from datetime import date, datetime
+from collections import Counter
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models.booking import ACTIVE_BOOKING_STATUSES, STATUS_CANCELLED, STATUS_PENDING, Booking
-from app.models.room import STATUS_ACTIVE, Room
+from app.models.booking import (
+    ACTIVE_BOOKING_STATUSES,
+    STATUS_CANCELLED,
+    STATUS_CONFIRMED,
+    STATUS_PENDING,
+    Booking,
+)
+from app.models.room import ROOM_QUALITIES, ROOM_TYPES, STATUS_ACTIVE, Room
 from app.services.errors import NotFoundError, ValidationError
 
 MAX_STAY_NIGHTS = 30
+MIN_ADVANCE_DAYS = 7  # ngày nhận phòng sớm nhất = hôm nay (giờ Việt Nam) + 7 ngày
+VN_TZ = timezone(timedelta(hours=7))
 CUSTOMER_NAME_MAX = 120
 SPECIAL_REQUESTS_MAX = 1000
 # Số điện thoại: sau khi bỏ khoảng trắng/dấu chấm/gạch ngang, chỉ gồm 9-15 chữ số (cho phép + đầu).
 PHONE_PATTERN = re.compile(r"^\+?\d{9,15}$")
+
+
+def vn_today() -> date:
+    """Ngày hôm nay theo giờ Việt Nam (không phụ thuộc múi giờ của server/container)."""
+    return datetime.now(VN_TZ).date()
+
+
+def earliest_check_in() -> date:
+    return vn_today() + timedelta(days=MIN_ADVANCE_DAYS)
 
 
 def _parse_date(payload: dict, field: str, errors: dict):
@@ -43,8 +61,11 @@ def _validate_booking_payload(payload: dict) -> dict:
     check_in = _parse_date(payload, "check_in", errors)
     check_out = _parse_date(payload, "check_out", errors)
     if check_in and check_out:
-        if check_in < date.today():
-            errors["check_in"] = "Check-in date cannot be in the past."
+        if check_in < earliest_check_in():
+            errors["check_in"] = (
+                f"Check-in must be at least {MIN_ADVANCE_DAYS} days from today "
+                f"(earliest: {earliest_check_in().strftime('%d/%m/%Y')})."
+            )
         elif check_out <= check_in:
             errors["check_out"] = "Check-out date must be after check-in date."
         elif (check_out - check_in).days > MAX_STAY_NIGHTS:
@@ -106,6 +127,59 @@ def list_active_rooms():
     return list(db.session.scalars(stmt))
 
 
+def search_rooms(room_type, check_in_raw, check_out_raw, quality=None):
+    """Tìm phòng đang mở bán theo chất lượng (A/B), loại phòng và (tuỳ chọn) khoảng ngày còn trống.
+
+    Để trống cả hai ngày = chỉ lọc theo loại. Nhập ngày thì phải nhập cả hai.
+    """
+    errors = {}
+    if room_type and room_type not in ROOM_TYPES:
+        errors["type"] = "Unknown room type."
+    if quality and quality not in ROOM_QUALITIES:
+        errors["quality"] = "Unknown quality."
+    check_in = check_out = None
+    if check_in_raw or check_out_raw:
+        check_in = _parse_date({"check_in": check_in_raw}, "check_in", errors)
+        check_out = _parse_date({"check_out": check_out_raw}, "check_out", errors)
+        if check_in and check_out and check_out <= check_in:
+            errors["check_out"] = "check_out must be after check_in."
+    if errors:
+        raise ValidationError(errors)
+
+    rooms = list_active_rooms()
+    if quality:
+        rooms = [r for r in rooms if r.quality == quality]
+    if room_type:
+        rooms = [r for r in rooms if r.type == room_type]
+    if check_in and check_out:
+        rooms = [r for r in rooms if _units_booked(r.id, check_in, check_out) < r.total_units]
+    return rooms
+
+
+def unavailable_dates(room: Room) -> dict:
+    """Các đêm đã KÍN của phòng (đủ total_units booking đã confirmed) cho lịch chọn ngày.
+
+    Trả về {"min_date": "YYYY-MM-DD", "disabled": ["YYYY-MM-DD", ...]}. Ngày trả phòng không
+    tính là đêm bị chiếm (đặt 5/10 -> 7/10 chiếm đêm 5 và 6, ngày 7 vẫn nhận khách mới).
+    """
+    min_date = earliest_check_in()
+    rows = db.session.execute(
+        db.select(Booking.check_in, Booking.check_out).where(
+            Booking.room_id == room.id,
+            Booking.status.in_(ACTIVE_BOOKING_STATUSES),
+            Booking.check_out > min_date,
+        )
+    ).all()
+    per_night = Counter()
+    for check_in, check_out in rows:
+        night = max(check_in, min_date)
+        while night < check_out:
+            per_night[night] += 1
+            night += timedelta(days=1)
+    disabled = sorted(d.isoformat() for d, count in per_night.items() if count >= room.total_units)
+    return {"min_date": min_date.isoformat(), "disabled": disabled}
+
+
 def get_bookable_room(room_id: int) -> Room:
     room = db.session.get(Room, room_id)
     if room is None or room.status != STATUS_ACTIVE:
@@ -124,7 +198,7 @@ def create_booking(user, room_id: int, payload: dict) -> Booking:
 
     booked = _units_booked(room.id, data["check_in"], data["check_out"])
     if booked >= room.total_units:
-        raise ValidationError({"_": "No units left for the selected dates. Try different dates."})
+        raise ValidationError({"_": "These dates are already taken. Please choose different dates."})
 
     nights = (data["check_out"] - data["check_in"]).days
     total_price = (Decimal(room.price_per_night) * nights).quantize(Decimal("0.01"))
@@ -147,13 +221,43 @@ def create_booking(user, room_id: int, payload: dict) -> Booking:
 
 def list_all_bookings():
     """Tất cả yêu cầu đặt phòng (mới nhất trước) cho Dashboard của admin."""
-    return list(db.session.scalars(db.select(Booking).order_by(Booking.id.desc())))
+    stmt = db.select(Booking).where(Booking.status != STATUS_CANCELLED).order_by(Booking.id.desc())
+    return list(db.session.scalars(stmt))
+
+
+def admin_set_status(booking_id: int, status: str) -> Booking:
+    """Admin xác nhận (confirmed) hoặc huỷ (cancelled) một yêu cầu đặt phòng.
+
+    Chỉ booking confirmed mới chặn ngày, nên lúc confirm phải kiểm tra lại: nếu khoảng ngày đó
+    đã đủ booking confirmed khác thì không confirm được. Khoá hàng của phòng (FOR UPDATE) để
+    hai admin confirm cùng lúc không thể vượt quá total_units.
+    """
+    if status not in (STATUS_CONFIRMED, STATUS_CANCELLED):
+        raise ValidationError({"status": "Status must be confirmed or cancelled."})
+    booking = db.session.get(Booking, booking_id)
+    if booking is None:
+        raise NotFoundError("Booking not found.")
+
+    if status == STATUS_CONFIRMED and booking.status != STATUS_CONFIRMED:
+        if booking.status == STATUS_CANCELLED:
+            raise ValidationError({"_": "This booking was cancelled, so it cannot be confirmed."})
+        room = db.session.get(Room, booking.room_id, with_for_update=True)
+        taken = _units_booked(room.id, booking.check_in, booking.check_out, exclude_booking_id=booking.id)
+        if taken >= room.total_units:
+            db.session.rollback()
+            raise ValidationError(
+                {"_": "These dates are already taken by a confirmed booking. Cancel this request or ask the guest to pick other dates."}
+            )
+
+    booking.status = status
+    db.session.commit()
+    return booking
 
 
 def list_user_bookings(user):
     stmt = (
         db.select(Booking)
-        .where(Booking.user_id == user.id)
+        .where(Booking.user_id == user.id, Booking.status != STATUS_CANCELLED)
         .order_by(Booking.check_in.desc())
     )
     return list(db.session.scalars(stmt))
