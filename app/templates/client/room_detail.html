@@ -26,14 +26,11 @@
                value="{{ form.get('phone', '') if form else '' }}" required>
       </div>
       <div class="field">
-        <label for="check_in">Check-in</label>
-        <input id="check_in" name="check_in" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10"
-               value="{{ form.get('check_in', '') if form else '' }}" required>
-      </div>
-      <div class="field">
-        <label for="check_out">Check-out</label>
-        <input id="check_out" name="check_out" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10"
-               value="{{ form.get('check_out', '') if form else '' }}" required>
+        <label for="date_range">Check-in &rarr; Check-out</label>
+        <input id="date_range" type="text" placeholder="dd/mm/yyyy &rarr; dd/mm/yyyy" autocomplete="off" readonly required>
+        <input type="hidden" id="check_in" name="check_in" value="{{ form.get('check_in', '') if form else '' }}">
+        <input type="hidden" id="check_out" name="check_out" value="{{ form.get('check_out', '') if form else '' }}">
+        <p class="helper-text" id="date-hint">Click the check-in day, then the check-out day. Check-in must be at least 7 days from today; greyed-out dates are already taken.</p>
       </div>
       <div class="field">
         <label for="special_requests">Special requests (optional)</label>
@@ -48,4 +45,63 @@
     </p>
   {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+{% if current_user %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script>
+(async function () {
+  const input = document.getElementById("date_range");
+  if (!input) return;
+  const inEl = document.getElementById("check_in");
+  const outEl = document.getElementById("check_out");
+  const hint = document.getElementById("date-hint");
+  const defaultHint = hint.textContent;
+  let disabled = [];
+  let minDate = null;
+  try {
+    const response = await fetch("{{ url_for('customer.unavailable_dates', room_id=room.id) }}");
+    const data = await response.json();
+    disabled = data.disabled.map((s) => new Date(s + "T00:00:00"));
+    minDate = new Date(data.min_date + "T00:00:00");
+  } catch (e) { /* không lấy được lịch: server vẫn kiểm tra lại khi gửi form */ }
+
+  const blocked = new Set(disabled.map((d) => flatpickr.formatDate(d, "Y-m-d")));
+  const warn = (text) => { hint.textContent = text; hint.style.color = "#b42318"; };
+  const reset = () => { hint.textContent = defaultHint; hint.style.color = ""; };
+
+  const picker = flatpickr(input, {
+    mode: "range",
+    dateFormat: "d/m/Y",
+    minDate: minDate,
+    disable: disabled,
+    locale: { firstDayOfWeek: 1, rangeSeparator: " \u2192 " },
+    defaultDate: inEl.value && outEl.value ? [inEl.value, outEl.value] : null,
+    onChange(selected) {
+      inEl.value = "";
+      outEl.value = "";
+      reset();
+      if (selected.length < 2) return;
+      const [start, end] = selected;
+      if (start.getTime() === end.getTime()) {
+        picker.clear();
+        warn("Please choose at least 1 night (check-out must be after check-in).");
+        return;
+      }
+      for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        if (blocked.has(flatpickr.formatDate(d, "Y-m-d"))) {
+          picker.clear();
+          warn("Some nights in that range are already taken. Please pick other dates.");
+          return;
+        }
+      }
+      inEl.value = flatpickr.formatDate(start, "d/m/Y");
+      outEl.value = flatpickr.formatDate(end, "d/m/Y");
+    },
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

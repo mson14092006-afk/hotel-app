@@ -2,27 +2,54 @@
 {% block title %}Dashboard - ET E4 Hotel{% endblock %}
 
 {% block content %}
+<style>
+  .request { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0.75rem 1rem; margin-bottom: 1rem; }
+  .request summary { cursor: pointer; }
+  .request summary span { display: block; }
+  .request-detail { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+  .request-detail p { margin: 0.25rem 0; }
+  .request-actions { display: flex; gap: 0.75rem; margin-top: 0.75rem; }
+  .request-actions form { margin: 0; }
+  .btn-outline-red { background: #fff; color: #b42318; border: 2px solid #b42318; border-radius: 6px; padding: 0.3rem 1rem; font-weight: 700; cursor: pointer; }
+  .btn-outline-red:hover:not(:disabled) { background: #fdecea; }
+  .btn-outline-red:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+
 <section class="page">
   <h1>Dashboard</h1>
   <p><a class="btn btn-primary" href="{{ url_for('admin_rooms.index') }}">Edit room &rarr;</a></p>
 
   <h2>Booking requests</h2>
   {% if bookings %}
-    <div class="room-grid">
-      {% for booking in bookings %}
-        <article class="room-card">
-          <p><strong>Room name:</strong> {{ booking.room.name }} ({{ booking.room.quality_label }} · {{ booking.room.type|capitalize }})</p>
-          <p><strong>Customer name:</strong> {{ booking.customer_name }}</p>
-          <p><strong>Phone:</strong> {{ booking.phone }}</p>
-          <p><strong>Check-in:</strong> {{ booking.check_in.strftime("%d/%m/%Y") }}</p>
-          <p><strong>Check-out:</strong> {{ booking.check_out.strftime("%d/%m/%Y") }}</p>
-          <p style="white-space: pre-line;"><strong>Special requests:</strong> {{ booking.special_requests or "None" }}</p>
+    {% for booking in bookings %}
+      <details class="request">
+        <summary>
+          <span><strong>Room name:</strong> {{ booking.room.name }} ({{ booking.room.quality_label }} · {{ booking.room.type|capitalize }})</span>
+          <span><strong>Customer name:</strong> {{ booking.customer_name }}</span>
+          <span><strong>Phone:</strong> {{ booking.phone }}</span>
+          <span><strong>Check-in:</strong> {{ booking.check_in.strftime("%d/%m/%Y") }}</span>
+          <span><strong>Check-out:</strong> {{ booking.check_out.strftime("%d/%m/%Y") }}</span>
+        </summary>
+
+        <div class="request-detail">
           <p><strong>Total:</strong> {{ "{:,.0f}".format(booking.total_price) }} VND</p>
-          <p><strong>Status:</strong> <span class="badge badge-{{ booking.status }}">{{ booking.status|capitalize }}</span></p>
           <p><strong>Account:</strong> {{ booking.user.username }}</p>
-        </article>
-      {% endfor %}
-    </div>
+          <p><strong>Status:</strong> <span class="badge badge-{{ booking.status }}">{{ booking.status|capitalize }}</span></p>
+          <p style="white-space: pre-line;"><strong>Special requests:</strong> {{ booking.special_requests or "None" }}</p>
+
+          <div class="request-actions">
+            <form method="post" action="{{ url_for('admin_home.confirm_booking', booking_id=booking.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-outline-red" type="submit" {% if booking.status == 'confirmed' %}disabled{% endif %}>Confirm</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_home.cancel_booking', booking_id=booking.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-outline-red" type="submit">Cancel</button>
+            </form>
+          </div>
+        </div>
+      </details>
+    {% endfor %}
   {% else %}
     <p>No booking requests yet.</p>
   {% endif %}

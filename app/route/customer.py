@@ -1,6 +1,6 @@
 """route/customer.py — Trang cho khách hàng: xem phòng + đặt phòng + xem booking của mình."""
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
-
+from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, url_for
+from app.models.room import ROOM_TYPES
 from app.services import booking_service
 from app.services.errors import NotFoundError, ValidationError
 from app.utils.decorators import login_required
@@ -10,9 +10,16 @@ bp = Blueprint("customer", __name__)
 
 @bp.get("/rooms")
 def rooms():
-    """Danh sách phòng đang mở bán — xem công khai, không cần đăng nhập."""
-    return render_template("client/rooms.html", rooms=booking_service.list_active_rooms())
-
+    """Trang Khám phá: tìm theo loại phòng + ngày (nếu có), xem công khai, không cần đăng nhập."""
+    form = request.args
+    try:
+        found = booking_service.search_rooms(
+            form.get("type"), form.get("check_in"), form.get("check_out"), form.get("quality")
+        )
+    except ValidationError as exc:
+        flash(" ".join(exc.errors.values()), "error")
+        found = booking_service.list_active_rooms()
+    return render_template("client/rooms.html", rooms=found, room_types=ROOM_TYPES, form=form)
 
 @bp.get("/rooms/<int:room_id>")
 def room_detail(room_id):
@@ -24,6 +31,14 @@ def room_detail(room_id):
         return redirect(url_for("customer.rooms"))
     return render_template("client/room_detail.html", room=room)
 
+@bp.get("/rooms/<int:room_id>/unavailable-dates")
+def unavailable_dates(room_id):
+    """JSON cho lịch chọn ngày: ngày sớm nhất được đặt + các đêm đã kín (xem công khai)."""
+    try:
+        room = booking_service.get_bookable_room(room_id)
+    except NotFoundError:
+        return jsonify(error="Room not found."), 404
+    return jsonify(booking_service.unavailable_dates(room))
 
 @bp.post("/rooms/<int:room_id>/book")
 @login_required
