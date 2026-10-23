@@ -1,0 +1,88 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+# Quyền ( ~ policy) của GITHUB_TOKEN (credentials) mà GitHub cấp cho Github Action workflow (process sử dụng credentials)
+permissions:
+  contents: read
+
+jobs:
+  # 1) Lint: phân tích tĩnh code (chưa cần chạy app)
+  lint:
+    runs-on: ubuntu-latest 
+    steps:
+      - uses: actions/checkout@v7 # Tải code của repo xuống runner
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install ruff==0.16.10
+      - run: ruff check . # Ruff: Công cụ lint cho Python
+
+  # 2) Test trên PostgreSQL thật: migration -> kiểm tra model khớp migration -> pytest
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    services:
+      postgres: # Tự tạo một DB container trên runner để test
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hotel
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hotel" 
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    # --health-cmd "pg_isready -U postgres -d hotel": Kiểm tra DB có sẵn sàng nhận kết nối chưa (command ps_isready)
+    # -- health-retries: Tối đa 10 lần kiểm tra thất bại liên tiếp
+    
+    env:
+      SECRET_KEY: ci-secret-only 
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/hotel
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip # # Bật cache pip để tái sử dụng package đã tải ở các lần CI trước
+          cache-dependency-path: requirements*.txt # khi dependency thay đổi, cache sẽ được phân biệt phù hợp
+      - run: pip install -r requirements.txt
+      - name: Chạy migration trên DB test
+        run: flask db upgrade
+      - name: Check xem model khới với DB không
+        run: flask db check
+      - name: Chạy pytest
+        run: pytest
+
+  # 3) Build image + quét lỗ hổng bằng Trivy (FAIL -> dừng CI)
+  build-scan:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4 # Chuẩn bị công cụ để build
+      - name: Build image
+        uses: docker/build-push-action@v7 # Build và push image
+        with:
+          context: .
+          load: true
+          tags: hotel-app:ci
+          cache-from: type=gha # Đọc cache từ Github Action
+          cache-to: type=gha 
+          # Lưu cache lên Github Actions (Docker)
+      - name: Trivy scan # Quét bảo mật image Docker
+        uses: aquasecurity/trivy-action@v0.36.0 # Repo trivy-action của aquasecurity (Đơn vị phát hành Trivy)
+        # v0.36.0: Phiên bản Github Action được sử dụng
+        with:
+          image-ref: hotel-app:ci # Image cần quét
+          format: table # Hiển thị kết quả dạng bảng trong log CI
+          severity: HIGH,CRITICAL  
+          exit-code: "1" 
+
+  
