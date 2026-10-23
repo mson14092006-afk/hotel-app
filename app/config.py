@@ -15,7 +15,7 @@ class BaseConfig:
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@db:5432/hotel"
     )
-    SECRET_KEY = os.getenv("SECRET_KEY", "secret-in-dev") # Khóa bí mật Flask dùng để ký và xác minh dữ liệu session (phiên đăng nhập)
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-change-me") # # Khóa bí mật Flask dùng để ký và xác minh dữ liệu session (phiên đăng nhập)
 
     # Cookie session: JS không đọc được (HttpOnly) và không gửi kèm request cross-site (Lax).
     SESSION_COOKIE_HTTPONLY = True
