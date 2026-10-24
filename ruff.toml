@@ -1,0 +1,14 @@
+# File cấu hình ruff
+
+# Giới hạn dòng 120 ký tự
+line-length = 
+
+# Bỏ qua thư mục migrations
+extend-exclude = ["migrations"]
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+# E4: Lỗi liên quan đến import
+# E7: Lỗi liên quan đến câu lệnh
+# E9: Lỗi liên quan đến cú pháp và code
+# F: Lỗi do Pyflakes phát hiện (Ví dụ import không dùng, biến không dùng...)
