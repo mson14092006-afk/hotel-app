@@ -52,7 +52,7 @@ jobs:
           python-version: "3.12"
           cache: pip # # Bật cache pip để tái sử dụng package đã tải ở các lần CI trước
           cache-dependency-path: requirements*.txt # khi dependency thay đổi, cache sẽ được phân biệt phù hợp
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-test.txt
       - name: Chạy migration trên DB test
         run: flask db upgrade
       - name: Check xem model khới với DB không
@@ -82,6 +82,7 @@ jobs:
         with:
           image-ref: hotel-app:ci # Image cần quét
           format: table # Hiển thị kết quả dạng bảng trong log CI
+          ignore-unfixed: true # Bỏ qua CVE chưa có bản vá, tránh chặn CI khi chưa thể khắc phục
           severity: HIGH,CRITICAL  
           exit-code: "1" 
 

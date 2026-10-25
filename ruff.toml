@@ -1,7 +1,7 @@
 # File cấu hình ruff
 
 # Giới hạn dòng 120 ký tự
-line-length = 
+line-length = 120
 
 # Bỏ qua thư mục migrations
 extend-exclude = ["migrations"]

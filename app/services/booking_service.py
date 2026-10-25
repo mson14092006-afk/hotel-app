@@ -25,6 +25,12 @@ SPECIAL_REQUESTS_MAX = 1000
 # Số điện thoại: sau khi bỏ khoảng trắng/dấu chấm/gạch ngang, chỉ gồm 9-15 chữ số (cho phép + đầu).
 PHONE_PATTERN = re.compile(r"^\+?\d{9,15}$")
 
+def display_date(raw) -> str:
+    """Chuẩn hoá ngày (dd/mm/yyyy hoặc yyyy-mm-dd) thành dd/mm/yyyy để điền sẵn vào form; sai/để trống -> ''."""
+    if not raw:
+        return ""
+    parsed = _parse_date({"d": raw}, "d", {})
+    return parsed.strftime("%d/%m/%Y") if parsed else ""
 
 def vn_today() -> date:
     """Ngày hôm nay theo giờ Việt Nam (không phụ thuộc múi giờ của server/container)."""
@@ -126,7 +132,6 @@ def list_active_rooms():
     stmt = db.select(Room).where(Room.status == STATUS_ACTIVE).order_by(Room.price_per_night)
     return list(db.session.scalars(stmt))
 
-
 def search_rooms(room_type, check_in_raw, check_out_raw, quality=None):
     """Tìm phòng đang mở bán theo chất lượng (A/B), loại phòng và (tuỳ chọn) khoảng ngày còn trống.
 
@@ -142,7 +147,9 @@ def search_rooms(room_type, check_in_raw, check_out_raw, quality=None):
         check_in = _parse_date({"check_in": check_in_raw}, "check_in", errors)
         check_out = _parse_date({"check_out": check_out_raw}, "check_out", errors)
         if check_in and check_out and check_out <= check_in:
-            errors["check_out"] = "check_out must be after check_in."
+            errors["check_out"] = "Check-out date must be after check-in date."
+        if check_in and check_in < vn_today():
+            errors["check_in"] = "Check-in date cannot be in the past."
     if errors:
         raise ValidationError(errors)
 

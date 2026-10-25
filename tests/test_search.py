@@ -28,10 +28,18 @@ def _html(response):
     return response.get_data(as_text=True)
 
 
-def _add_room(app, name, room_type="twin", total_units=1, status="active"):
+def _add_room(app, name, room_type="double", total_units=1, status="active"):
+    capacity = {"single": 1, "double": 2, "family": 4}[room_type]
     with app.app_context():
-        room = Room(name=name, type=room_type, capacity=2, total_units=total_units,
-                    price_per_night="1000000", status=status)
+        room = Room(
+            name=name,
+            quality="B",
+            type=room_type,
+            capacity=capacity,
+            total_units=total_units,
+            price_per_night=1000000,
+            status=status,
+        )
         db.session.add(room)
         db.session.commit()
         return room.id
@@ -40,8 +48,13 @@ def _add_room(app, name, room_type="twin", total_units=1, status="active"):
 def _book(app, room_id, check_in, check_out, status="confirmed"):
     with app.app_context():
         user_id = db.session.scalar(db.select(User.id))
-        db.session.add(Booking(user_id=user_id, room_id=room_id, guests=1, check_in=date.fromisoformat(check_in),
-                               check_out=date.fromisoformat(check_out), total_price=1000000, status=status))
+        db.session.add(Booking(
+            user_id=user_id, room_id=room_id,
+            customer_name="Guest", phone="0912345678",
+            check_in=date.fromisoformat(check_in),
+            check_out=date.fromisoformat(check_out),
+            total_price=1000000, status=status,
+        ))
         db.session.commit()
 
 
@@ -58,16 +71,21 @@ def test_kham_pha_lists_only_active_rooms(client, app):
 
 def test_search_bar_offers_all_room_types(client):
     html = _html(client.get("/rooms"))
-    for room_type in ("single", "double", "twin", "family", "suite"):
+    for room_type in ("single", "double", "family"):
         assert f'value="{room_type}"' in html
 
 
 def test_search_filters_by_type(client, app):
-    _add_room(app, "Twin One", "twin")
-    _add_room(app, "Suite One", "suite")
-    html = _html(client.get("/rooms?type=suite"))
-    assert "Suite One" in html
-    assert "Twin One" not in html
+    _add_room(app, "B2", "double")
+    _add_room(app, "A4", "family")
+
+    html = _html(client.get("/rooms?type=family"))
+    assert ">A4<" in html
+    assert ">B2<" not in html
+
+    html = _html(client.get("/rooms?type=double"))
+    assert ">B2<" in html
+    assert ">A4<" not in html
 
 
 def test_search_excludes_room_with_no_unit_left_for_dates(client, app):
@@ -111,13 +129,16 @@ def test_search_rejects_unknown_room_type(client):
 
 
 def test_no_match_shows_message(client, app):
-    _add_room(app, "Twin One", "twin")
-    assert "No rooms match your search" in _html(client.get("/rooms?type=suite"))
+    _add_room(app, "B2", "double")
+    assert "No rooms match your search" in _html(client.get("/rooms?type=family"))
 
 
 def test_room_detail_prefills_searched_dates(customer_client, app):
-    # Form ngày chỉ hiện khi đã đăng nhập (anonymous chỉ thấy link Login/register).
     room_id = _add_room(app, "Prefill Room")
     html = _html(customer_client.get(f"/rooms/{room_id}?check_in={D(2)}&check_out={D(4)}"))
-    assert f'value="{D(2)}"' in html
-    assert f'value="{D(4)}"' in html
+
+    def dmy(iso):
+        return date.fromisoformat(iso).strftime("%d/%m/%Y")
+
+    assert f'value="{dmy(D(2))}"' in html
+    assert f'value="{dmy(D(4))}"' in html

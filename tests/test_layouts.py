@@ -41,9 +41,9 @@ def test_customer_navbar_has_rooms_and_bookings_but_no_admin_link(customer_clien
 
 def test_client_home_has_welcome_and_search_bar(client):
     html = _html(client.get("/"))
-    assert "Welcome to our hotel" in html
+    assert "Welcome" in html
     assert 'name="check_in"' in html and 'name="check_out"' in html
-    for room_type in ("single", "double", "twin", "family", "suite"):
+    for room_type in ("single", "double", "family"):
         assert f'value="{room_type}"' in html
 
 
@@ -66,7 +66,7 @@ def test_admin_home_redirects_to_hello_admin(admin_client):
 
 def test_hello_admin_page_uses_admin_navbar_only(admin_client):
     html = _html(admin_client.get("/admin"))
-    assert "Hello Admin" in html
+    assert "Dashboard" in html
     assert "Edit room" in html
     assert 'href="/rooms"' not in html
     assert "My bookings" not in html

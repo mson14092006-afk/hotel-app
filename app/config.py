@@ -58,7 +58,7 @@ class TestingConfig(BaseConfig):
     WTF_CSRF_ENABLED = False  # test client không cần token CSRF
     # Mặc định SQLite in-memory cho nhanh; đặt TEST_DATABASE_URL để test trên PostgreSQL thật.
     SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL", "sqlite://")
-
+    MAIL_BACKEND = "console"  # test không bao giờ gửi SMTP thật
 
 CONFIGS = {
     "development": DevelopmentConfig,

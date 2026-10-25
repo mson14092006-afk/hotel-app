@@ -12,6 +12,7 @@ bp = Blueprint("customer", __name__)
 def rooms():
     """Trang Khám phá: tìm theo loại phòng + ngày (nếu có), xem công khai, không cần đăng nhập."""
     form = request.args
+    status = 200
     try:
         found = booking_service.search_rooms(
             form.get("type"), form.get("check_in"), form.get("check_out"), form.get("quality")
@@ -19,7 +20,8 @@ def rooms():
     except ValidationError as exc:
         flash(" ".join(exc.errors.values()), "error")
         found = booking_service.list_active_rooms()
-    return render_template("client/rooms.html", rooms=found, room_types=ROOM_TYPES, form=form)
+        status = 422  # tìm kiếm sai dữ liệu: vẫn hiện danh sách phòng kèm thông báo lỗi
+    return render_template("client/rooms.html", rooms=found, room_types=ROOM_TYPES, form=form), status
 
 @bp.get("/rooms/<int:room_id>")
 def room_detail(room_id):
@@ -29,7 +31,12 @@ def room_detail(room_id):
     except NotFoundError:
         flash("Room not found.", "error")
         return redirect(url_for("customer.rooms"))
-    return render_template("client/room_detail.html", room=room)
+    # Điền sẵn ngày khách đã chọn ở thanh tìm kiếm (?check_in=...&check_out=...), dạng dd/mm/yyyy
+    prefill = {
+        "check_in": booking_service.display_date(request.args.get("check_in")),
+        "check_out": booking_service.display_date(request.args.get("check_out")),
+    }
+    return render_template("client/room_detail.html", room=room, form=prefill)
 
 @bp.get("/rooms/<int:room_id>/unavailable-dates")
 def unavailable_dates(room_id):
