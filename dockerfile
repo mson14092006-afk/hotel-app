@@ -18,10 +18,13 @@ WORKDIR /app
 # /usr/local là nơi Python có thể tìm thấy các package như Flask, Gunicorn...
 COPY --from=builder /install /usr/local
 
+# Cập nhật metadata package -> nâng cấp các package hệ điều hành -> xóa metadata APT để giảm dung lượng image
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 # Copy source code
 COPY . .
 
-# Tạo user riêng, không chạy app bằng root
+# Tạo user riêng, không chạy app bằng root (least-privilege)
 RUN useradd --create-home appuser \
     && chown -R appuser:appuser /app
 
