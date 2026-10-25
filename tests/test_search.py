@@ -136,6 +136,9 @@ def test_no_match_shows_message(client, app):
 def test_room_detail_prefills_searched_dates(customer_client, app):
     room_id = _add_room(app, "Prefill Room")
     html = _html(customer_client.get(f"/rooms/{room_id}?check_in={D(2)}&check_out={D(4)}"))
-    dmy = lambda iso: date.fromisoformat(iso).strftime("%d/%m/%Y")
+
+    def dmy(iso):
+        return date.fromisoformat(iso).strftime("%d/%m/%Y")
+
     assert f'value="{dmy(D(2))}"' in html
     assert f'value="{dmy(D(4))}"' in html
