@@ -62,7 +62,6 @@ def test_second_verified_user_is_customer(app, client, tmp_path):
     client.get(f"/verify-email/{_extract_token(_read_outbox(app))}")
 
     client.post("/register", data={**VALID, "username": "guest2", "email": "guest2@example.com"})
-    token2 = _extract_token(_read_outbox(app).splitlines()[-1] if False else _read_outbox(app))
     # lấy token của lần gửi email thứ 2 (cuối file)
     tokens = re.findall(r"/verify-email/([\w-]+)", _read_outbox(app))
     client.get(f"/verify-email/{tokens[-1]}")

@@ -13,6 +13,8 @@
         {% include "client/_room_card.html" %}
       {% endfor %}
     </div>
+  {% elif form and (form.get('quality') or form.get('type') or form.get('check_in') or form.get('check_out')) %}
+    <p>No rooms match your search. Try a different room type or different dates.</p>
   {% else %}
     <p>No rooms available right now.</p>
   {% endif %}
