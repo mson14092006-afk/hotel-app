@@ -1,0 +1,70 @@
+name: Build and Publish
+
+on:
+  workflow_run:
+    workflows: ["CI"]         
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-scan-push:
+    name: Build, Scan and Push
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+
+    # Chỉ chạy nếu: workflow CI trước đó success
+    # CI được kích hoạt bởi sự kiện push, không phải pull_request.
+    # Commit chạy CI thuộc nhánh main
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/hotel-app
+      SHA: ${{ github.event.workflow_run.head_sha }} # Lấy SHA của commit mà workflow trước đó đã chạy
+
+    steps:
+      - name: Checkout đúng commit của workflow trước
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          
+      - uses: docker/setup-buildx-action@v4
+
+      # Build lên runner
+      - name: Build image
+        uses: docker/build-push-action@v7  # Chuẩn bị công cụ để build
+        with:
+          context: .
+          load: true
+          tags: ${{ env.IMAGE }}:${{ env.SHA }}
+          cache-from: type=gha # Đọc cache từ Github Action
+          cache-to: type=gha # Lưu cache lên Github Actions (Docker)
+
+      # Quét chính image vừa build
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@v0.36.0 # Repo trivy-action của aquasecurity (Đơn vị phát hành Trivy)
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ env.SHA }} # Image cần quét
+          format: table # Hiển thị kết quả dạng bảng trong log CI
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true # Bỏ qua CVE chưa có bản vá, tránh chặn CI khi chưa thể khắc phục
+          exit-code: "1"
+
+      # Đăng nhập vào Docker Hub 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Đẩy chính image đã quét (không build lại): tag theo commit + latest
+      - name: Push
+        run: |
+          docker tag "$IMAGE:$SHA" "$IMAGE:latest"
+          docker push "$IMAGE:$SHA"
+          docker push "$IMAGE:latest"
+        # docker tag: gắn thêm tag ở local
+        # docker push: push image với tag lên Docker Hub

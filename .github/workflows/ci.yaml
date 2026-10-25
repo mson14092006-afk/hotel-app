@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -60,30 +60,4 @@ jobs:
       - name: Chạy pytest
         run: pytest
 
-  # 3) Build image + quét lỗ hổng bằng Trivy (FAIL -> dừng CI)
-  build-scan:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4 # Chuẩn bị công cụ để build
-      - name: Build image
-        uses: docker/build-push-action@v7 # Build và push image
-        with:
-          context: .
-          load: true
-          tags: hotel-app:ci
-          cache-from: type=gha # Đọc cache từ Github Action
-          cache-to: type=gha 
-          # Lưu cache lên Github Actions (Docker)
-      - name: Trivy scan # Quét bảo mật image Docker
-        uses: aquasecurity/trivy-action@v0.36.0 # Repo trivy-action của aquasecurity (Đơn vị phát hành Trivy)
-        # v0.36.0: Phiên bản Github Action được sử dụng
-        with:
-          image-ref: hotel-app:ci # Image cần quét
-          format: table # Hiển thị kết quả dạng bảng trong log CI
-          ignore-unfixed: true # Bỏ qua CVE chưa có bản vá, tránh chặn CI khi chưa thể khắc phục
-          severity: HIGH,CRITICAL  
-          exit-code: "1" 
-
-  
+ 
