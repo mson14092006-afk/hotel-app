@@ -33,4 +33,4 @@ USER appuser
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
+CMD ["sh", "-c", "flask --app 'app:create_app()' db upgrade && exec gunicorn --bind 0.0.0.0:5000 'app:create_app()'"]
