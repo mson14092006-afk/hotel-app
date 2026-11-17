@@ -7,7 +7,7 @@ import os
 
 # DEVELOPMENT: chạy app local, dùng PostgreSQL local (Docker Compose).
 # TESTING: chạy pytest, dùng test database riêng và được reset sau mỗi test.
-# PRODUCTION: chạy app thật trên AWS, dùng PostgreSQL trên Amazon RDS.
+# PRODUCTION: chạy app thật trên AWS/Render, dùng PostgreSQL (RDS hoặc Render Postgres).
 
 class BaseConfig:
     """Cấu hình dùng chung cho mọi môi trường."""
@@ -15,7 +15,7 @@ class BaseConfig:
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@db:5432/hotel"
     )
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-change-me") # # Khóa bí mật Flask dùng để ký và xác minh dữ liệu session (phiên đăng nhập)
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-change-me")  # Khóa bí mật Flask dùng để ký và xác minh dữ liệu session (phiên đăng nhập)
 
     # Cookie session: JS không đọc được (HttpOnly) và không gửi kèm request cross-site (Lax).
     SESSION_COOKIE_HTTPONLY = True
@@ -24,14 +24,13 @@ class BaseConfig:
     # Token CSRF gắn với session, không tự hết hạn sau 1 giờ (trang admin có thể mở lâu).
     WTF_CSRF_TIME_LIMIT = None
 
-    # --- Email xác thực đăng ký ---
-    # "smtp": gửi email thật bằng MAIL_SERVER/MAIL_USERNAME/MAIL_PASSWORD ở dưới.
-    MAIL_SERVER = os.getenv("MAIL_SERVER", "localhost")
-    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
-    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "no-reply@ete4hotel.example")
+    # --- Email xác thực đăng ký (gửi qua Brevo HTTP API, cổng 443) ---
+    # Render chặn cổng SMTP (25/465/587) nên không dùng SMTP nữa.
+    # "brevo": gửi thật qua Brevo. "console": chỉ in ra log (dùng cho test).
+    MAIL_BACKEND = os.getenv("MAIL_BACKEND", "brevo")
+    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")            # API key v3 của Brevo
+    MAIL_SENDER_EMAIL = os.getenv("MAIL_SENDER_EMAIL", "")    # phải được verify trong Brevo
+    MAIL_SENDER_NAME = os.getenv("MAIL_SENDER_NAME", "ET E4 Hotel")
 
     @classmethod
     def validate(cls) -> None:
@@ -45,12 +44,16 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
     SESSION_COOKIE_SECURE = True  # cookie chỉ đi qua HTTPS
+    PREFERRED_URL_SCHEME = "https"  # link xác thực email (url_for _external) dùng https
 
     @classmethod
     def validate(cls) -> None:
-        """Từ chối khởi động production nếu quên đặt SECRET_KEY thật."""
+        """Từ chối khởi động production nếu thiếu cấu hình bắt buộc."""
         if cls.SECRET_KEY == "dev-only-secret-change-me":
             raise RuntimeError("SECRET_KEY must be set in production.")
+        # Thiếu cấu hình Brevo thì báo ngay lúc khởi động, không đợi tới lúc có người đăng ký
+        if cls.MAIL_BACKEND == "brevo" and not (cls.BREVO_API_KEY and cls.MAIL_SENDER_EMAIL):
+            raise RuntimeError("BREVO_API_KEY and MAIL_SENDER_EMAIL must be set in production.")
 
 
 class TestingConfig(BaseConfig):
@@ -58,7 +61,7 @@ class TestingConfig(BaseConfig):
     WTF_CSRF_ENABLED = False  # test client không cần token CSRF
     # Mặc định SQLite in-memory cho nhanh; đặt TEST_DATABASE_URL để test trên PostgreSQL thật.
     SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL", "sqlite://")
-    MAIL_BACKEND = "console"  # test không bao giờ gửi SMTP thật
+    MAIL_BACKEND = "console"  # test không bao giờ gửi mail thật
 
 CONFIGS = {
     "development": DevelopmentConfig,
