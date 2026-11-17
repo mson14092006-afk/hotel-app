@@ -2,6 +2,7 @@
 """
 import requests
 from flask import current_app
+from markupsafe import escape  # thêm vào phần import ở đầu file
 
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
@@ -57,3 +58,15 @@ def send_email(to_email: str, subject: str, html_content: str, to_name: str | No
 
     # Giá trị lạ (gõ sai biến môi trường) thì dừng ngay để phát hiện sớm
     raise RuntimeError(f"MAIL_BACKEND không hợp lệ: {backend!r}")
+
+def send_verification_email(to_email: str, username: str, verify_url: str) -> bool:
+    """Gửi email xác thực đăng ký (được auth_service._send_verification gọi)."""
+    # escape để username không chèn được HTML vào nội dung mail
+    html = (
+        f"<p>Xin chào {escape(username)},</p>"
+        "<p>Cảm ơn bạn đã đăng ký tại ET E4 Hotel. "
+        "Bấm vào liên kết dưới đây để xác thực email:</p>"
+        f'<p><a href="{escape(verify_url)}">Xác thực email</a></p>'
+        "<p>Nếu bạn không đăng ký, hãy bỏ qua email này.</p>"
+    )
+    return send_email(to_email, "Xác thực email - ET E4 Hotel", html, to_name=username)
