@@ -14,8 +14,8 @@ services:
   app:
     build: .
     container_name: hotel-app
-    env_file:
-      - .env
+    # env_file:
+    #   - .env
     volumes:
       # Bind mount
       - .:/app
